@@ -3,6 +3,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FeedIt", "FeedIt.vcproj", "
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "Setup\Setup.vdproj", "{30D5BF2D-16ED-4BAB-B61F-179C0427B7B9}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
 		Debug = Debug
@@ -13,6 +17,8 @@ Global
 		{81B44EA9-A270-4507-9C00-7A2651159F8C}.Debug.Build.0 = Debug|Win32
 		{81B44EA9-A270-4507-9C00-7A2651159F8C}.Release.ActiveCfg = Release|Win32
 		{81B44EA9-A270-4507-9C00-7A2651159F8C}.Release.Build.0 = Release|Win32
+		{30D5BF2D-16ED-4BAB-B61F-179C0427B7B9}.Debug.ActiveCfg = Debug
+		{30D5BF2D-16ED-4BAB-B61F-179C0427B7B9}.Release.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

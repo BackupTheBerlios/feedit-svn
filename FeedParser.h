@@ -22,8 +22,8 @@ public:
 
 	CFeedParser(const char* url) : m_type(FPFT_UNKNOWN)
 	{
-		CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
-		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
+		MSXML2::IXMLDOMDocument2Ptr xmldocument;
+		xmldocument.CreateInstance(_uuidof(MSXML2::DOMDocument));
 		ATLASSERT(xmldocument != NULL);
 		xmldocument->async = FALSE;
 		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
@@ -36,15 +36,15 @@ public:
 			return;
 		}
 
-		CComPtr<MSXML2::IXMLDOMNode> node;
+		MSXML2::IXMLDOMNodePtr node;
 
 		if((node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"))) != NULL)
 		{
 			m_type = FPFT_RSS09;
-			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
-			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("rss09:link"));
-			CComPtr<MSXML2::IXMLDOMNode> imagenode = node->selectSingleNode(_bstr_t("rss09:image/@rdf:resource"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
+			MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
+			MSXML2::IXMLDOMNodePtr linknode = node->selectSingleNode(_bstr_t("rss09:link"));
+			MSXML2::IXMLDOMNodePtr imagenode = node->selectSingleNode(_bstr_t("rss09:image/@rdf:resource"));
+			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
 
 			if(titlenode != NULL)
 				m_title = (LPTSTR)titlenode->text;
@@ -61,10 +61,10 @@ public:
 		else if((node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss10:channel"))) != NULL)
 		{
 			m_type = FPFT_RSS10;
-			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
-			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("rss10:link"));
-			CComPtr<MSXML2::IXMLDOMNode> imagenode = node->selectSingleNode(_bstr_t("rss10:image/@rdf:resource"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
+			MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
+			MSXML2::IXMLDOMNodePtr linknode = node->selectSingleNode(_bstr_t("rss10:link"));
+			MSXML2::IXMLDOMNodePtr imagenode = node->selectSingleNode(_bstr_t("rss10:image/@rdf:resource"));
+			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
 
 			if(titlenode != NULL)
 				m_title = (LPTSTR)titlenode->text;
@@ -81,10 +81,10 @@ public:
 		else if((node = xmldocument->selectSingleNode(_bstr_t("/rss/channel"))) != NULL)
 		{
 			m_type = FPFT_RSS20;
-			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
-			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("link"));
-			CComPtr<MSXML2::IXMLDOMNode> imagenode = node->selectSingleNode(_bstr_t("image/url"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
+			MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("title"));
+			MSXML2::IXMLDOMNodePtr linknode = node->selectSingleNode(_bstr_t("link"));
+			MSXML2::IXMLDOMNodePtr imagenode = node->selectSingleNode(_bstr_t("image/url"));
+			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("description"));
 
 			if(titlenode != NULL)
 				m_title = (LPTSTR)titlenode->text;
@@ -101,10 +101,10 @@ public:
 		else if((node = xmldocument->selectSingleNode(_bstr_t("/atom:feed"))) != NULL)
 		{
 			m_type = FPFT_ATOM;
-			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("atom:title"));
-			CComPtr<MSXML2::IXMLDOMNode> linknode = xmldocument->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
-			CComPtr<MSXML2::IXMLDOMNode> imagenode = xmldocument->selectSingleNode(_bstr_t("atom:image/atom:link[@rel=\"alternate\"]/@href"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = xmldocument->selectSingleNode(_bstr_t("atom:tagline"));
+			MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("atom:title"));
+			MSXML2::IXMLDOMNodePtr linknode = xmldocument->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
+			MSXML2::IXMLDOMNodePtr imagenode = xmldocument->selectSingleNode(_bstr_t("atom:image/atom:link[@rel=\"alternate\"]/@href"));
+			MSXML2::IXMLDOMNodePtr descriptionnode = xmldocument->selectSingleNode(_bstr_t("atom:tagline"));
 
 			if(titlenode != NULL)
 				m_title = (LPTSTR)titlenode->text;
@@ -123,18 +123,18 @@ public:
 		{
 		case FPFT_RSS09:
 			{
-				CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss09:item"));
+				MSXML2::IXMLDOMNodeListPtr nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss09:item"));
 
 				if(nodes != NULL && nodes->length > 0)
 				{
-					CComPtr<MSXML2::IXMLDOMNode> node;
+					MSXML2::IXMLDOMNodePtr node;
 
 					while((node = nodes->nextNode()) != NULL)
 					{
-						CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
-						CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss09:link"));
-						CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
-						CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
+						MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
+						MSXML2::IXMLDOMNodePtr urlnode = node->selectSingleNode(_bstr_t("rss09:link"));
+						MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
+						MSXML2::IXMLDOMNodePtr datenode = node->selectSingleNode(_bstr_t("dc:date"));
 						FeedItem item;
 
 						if(titlenode != NULL)
@@ -157,18 +157,18 @@ public:
 			}
 		case FPFT_RSS10:
 			{
-				CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss10:item"));
+				MSXML2::IXMLDOMNodeListPtr nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss10:item"));
 
 				if(nodes != NULL && nodes->length > 0)
 				{
-					CComPtr<MSXML2::IXMLDOMNode> node;
+					MSXML2::IXMLDOMNodePtr node;
 
 					while((node = nodes->nextNode()) != NULL)
 					{
-						CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
-						CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss10:link"));
-						CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
-						CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
+						MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
+						MSXML2::IXMLDOMNodePtr urlnode = node->selectSingleNode(_bstr_t("rss10:link"));
+						MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
+						MSXML2::IXMLDOMNodePtr datenode = node->selectSingleNode(_bstr_t("dc:date"));
 						FeedItem item;
 
 						if(titlenode != NULL)
@@ -191,18 +191,18 @@ public:
 			}
 		case FPFT_RSS20:
 			{
-				CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rss/channel/item"));
+				MSXML2::IXMLDOMNodeListPtr nodes = xmldocument->selectNodes(_bstr_t("/rss/channel/item"));
 
 				if(nodes != NULL && nodes->length > 0)
 				{
-					CComPtr<MSXML2::IXMLDOMNode> node;
+					MSXML2::IXMLDOMNodePtr node;
 
 					while((node = nodes->nextNode()) != NULL)
 					{
-						CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
-						CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("link"));
-						CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
-						CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("date"));
+						MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("title"));
+						MSXML2::IXMLDOMNodePtr urlnode = node->selectSingleNode(_bstr_t("link"));
+						MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("description"));
+						MSXML2::IXMLDOMNodePtr datenode = node->selectSingleNode(_bstr_t("date"));
 
 						if(datenode == NULL)
 							datenode = node->selectSingleNode(_bstr_t("pubDate"));
@@ -229,19 +229,19 @@ public:
 			}
 		case FPFT_ATOM:
 			{
-				CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/atom:feed/atom:entry"));
+				MSXML2::IXMLDOMNodeListPtr nodes = xmldocument->selectNodes(_bstr_t("/atom:feed/atom:entry"));
 
 				if(nodes != NULL && nodes->length > 0)
 				{
-					CComPtr<MSXML2::IXMLDOMNode> baseurlnode = xmldocument->selectSingleNode(_bstr_t("/atom:feed/atom:link[@rel=\"alternate\"]/@href"));
-					CComPtr<MSXML2::IXMLDOMNode> node;
+					MSXML2::IXMLDOMNodePtr baseurlnode = xmldocument->selectSingleNode(_bstr_t("/atom:feed/atom:link[@rel=\"alternate\"]/@href"));
+					MSXML2::IXMLDOMNodePtr node;
 
 					while((node = nodes->nextNode()) != NULL)
 					{
-						CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("atom:title"));
-						CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
-						CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("atom:content"));
-						CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("atom:issued"));
+						MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("atom:title"));
+						MSXML2::IXMLDOMNodePtr urlnode = node->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
+						MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("atom:content"));
+						MSXML2::IXMLDOMNodePtr datenode = node->selectSingleNode(_bstr_t("atom:issued"));
 						FeedItem item;
 
 						if(titlenode != NULL)

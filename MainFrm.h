@@ -30,8 +30,8 @@ public:
 	CCustomTreeViewCtrl m_treeView;
 	CCustomListViewCtrl m_listView;
 	CAxWindow m_htmlView;
-	CComPtr<IWebBrowser2> m_htmlCtrl;
-	CComPtr<ADODB::_Connection> m_connection;
+	IWebBrowser2Ptr m_htmlCtrl;
+	ADODB::_ConnectionPtr m_connection;
 	CImageList m_dragImage;
 	int m_downloads;
 	BOOL m_dragging;
@@ -63,15 +63,15 @@ public:
 
 		if(::GetFileAttributes(m_dbPath) == INVALID_FILE_ATTRIBUTES)
 		{
-			CComPtr<ADOX::_Catalog> catalog;
-			catalog.CoCreateInstance(CComBSTR("ADOX.Catalog"));
+			ADOX::_CatalogPtr catalog;
+			catalog.CreateInstance(__uuidof(ADOX::Catalog));
 			ATLASSERT(catalog != NULL);
 			catalog->Create(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath);
-			CComPtr<ADODB::_Connection> connection;
-			connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
+			ADODB::_ConnectionPtr connection;
+			connection.CreateInstance(__uuidof(ADODB::Connection));
 			ATLASSERT(connection != NULL);
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
-			CComPtr<ADODB::_Recordset> recordset;
+			ADODB::_RecordsetPtr recordset;
 			recordset = connection->Execute(_bstr_t("CREATE TABLE Configuration (Name VARCHAR(255) UNIQUE NOT NULL, CurrentValue VARCHAR(255) NOT NULL)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DBSchemaVersion', '1')"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultRefreshInterval', '60')"), NULL, 0);
@@ -189,27 +189,27 @@ public:
 		{
 			{
 				CAtlMap<int, bool> entrymap;
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 
 				if(feeddata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
 				}
 				else if(folderdata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
 				}
 				else
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued";
 				}
 
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 				if(!recordset->EndOfFile)
 				{
@@ -423,7 +423,6 @@ public:
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(ID_NEXT_PANE, OnNextPane)
 		COMMAND_ID_HANDLER(ID_PREV_PANE, OnPrevPane)
-		//CHAIN_MSG_MAP_MEMBER(m_SrcBar)
 		CHAIN_MSG_MAP_MEMBER(m_treeView)
 		CHAIN_MSG_MAP_MEMBER(m_listView)
 		CHAIN_MSG_MAP(CTrayIconImpl<CMainFrame>)
@@ -455,14 +454,14 @@ public:
 	HRESULT Execute(DWORD_PTR /*dwParam*/, HANDLE /*hObject*/)
 	{
 		::CoInitialize(NULL);
-		CComPtr<ADODB::_Recordset> recordset;
-		recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+		ADODB::_RecordsetPtr recordset;
+		recordset.CreateInstance(__uuidof(ADODB::Recordset));
 		ATLASSERT(recordset != NULL);
 		recordset->CursorLocation = ADODB::adUseServer;
 		SYSTEMTIME t;
 		::GetSystemTime(&t);
 		COleDateTime now(t);
-		recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+		recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 
 		if(!recordset->EndOfFile)
 		{
@@ -494,7 +493,7 @@ public:
 						recordset->Fields->GetItem("Link")->Value = (_bstr_t)fp.m_link;
 						recordset->Fields->GetItem("ImageLink")->Value = (_bstr_t)fp.m_image;
 						recordset->Fields->GetItem("Description")->Value = (_bstr_t)fp.m_description;
-						recordset->Fields->GetItem("LastUpdate")->Value = (BSTR)CComBSTR(now.Format("%Y/%m/%d %H:%M:%S"));
+						recordset->Fields->GetItem("LastUpdate")->Value = (_bstr_t)now.Format("%Y/%m/%d %H:%M:%S");
 						recordset->Update();
 					}
 				}
@@ -621,11 +620,11 @@ public:
 
 			CAtlString t2 = dt.Format("%Y/%m/%d %H:%M:%S");
 
-			CComPtr<ADODB::_Recordset> recordset;
-			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			ADODB::_RecordsetPtr recordset;
+			recordset.CreateInstance(__uuidof(ADODB::Recordset));
 			ATLASSERT(recordset != NULL);
 			recordset->CursorLocation = ADODB::adUseServer;
-			recordset->Open(_bstr_t("News"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+			recordset->Open(_bstr_t("News"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 			recordset->AddNew();
 			recordset->Fields->GetItem("FeedID")->Value = feedid;
 			recordset->Fields->GetItem("Title")->Value = (_bstr_t)item.m_title;
@@ -644,13 +643,13 @@ public:
 
 	void UpdateFeedProperties(FeedData* feeddata)
 	{
-		CComPtr<ADODB::_Command> command;
-		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ADODB::_CommandPtr command;
+		command.CreateInstance(__uuidof(ADODB::Command));
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Feeds WHERE ID=?";
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
-		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
+		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 		if(!recordset->EndOfFile)
 		{
@@ -664,13 +663,13 @@ public:
 
 	int GetConfiguration(const char* name, int def)
 	{
-		CComPtr<ADODB::_Command> command;
-		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ADODB::_CommandPtr command;
+		command.CreateInstance(__uuidof(ADODB::Command));
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Configuration WHERE Name=?";
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(name)));
-		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(name)));
+		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 		if(!recordset->EndOfFile)
 		{
@@ -683,27 +682,27 @@ public:
 
 	void SetConfiguration(const char* name, int val)
 	{
-		CComPtr<ADODB::_Command> command;
-		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ADODB::_CommandPtr command;
+		command.CreateInstance(__uuidof(ADODB::Command));
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "UPDATE Configuration SET CurrentValue=? WHERE Name=?";
 		CAtlString valstr;
 		valstr.Format("%d", val);
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(valstr)));
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(name)));
-		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(valstr)));
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(name)));
+		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 	}
 
 	int GetUnreadItemCount(int feedid)
 	{
-		CComPtr<ADODB::_Command> command;
-		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ADODB::_CommandPtr command;
+		command.CreateInstance(__uuidof(ADODB::Command));
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT COUNT(*) AS ItemCount FROM News WHERE FeedID=? AND Unread='1'";
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feedid)));
-		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feedid)));
+		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 		if(!recordset->EndOfFile)
 		{
@@ -805,15 +804,15 @@ public:
 		m_treeView.SetItemImage(m_feedsRoot, 1, 1);
 		m_searchRoot = m_treeView.InsertItem(_T("Search results"), TVI_ROOT, TVI_LAST);
 
-		m_connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
+		m_connection.CreateInstance(__uuidof(ADODB::Connection));
 		ATLASSERT(m_connection != NULL);
 		m_connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
-		CComPtr<ADODB::_Command> command;
-		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ADODB::_CommandPtr command;
+		command.CreateInstance(__uuidof(ADODB::Command));
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Folders";
-		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 		if(!recordset->EndOfFile)
 		{
@@ -827,13 +826,13 @@ public:
 				HTREEITEM folderitem = m_treeView.InsertItem(folderitemdata->m_name, m_feedsRoot, TVI_LAST);
 				m_treeView.SetItemImage(folderitem, 1, 1);
 				m_treeView.SetItemData(folderitem, (DWORD_PTR)folderitemdata);
-				CComPtr<ADODB::_Command> subcommand;
-				subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr subcommand;
+				subcommand.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(subcommand != NULL);
 				subcommand->ActiveConnection = m_connection;
 				subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=?";
-				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderitemdata->m_id)));
-				CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderitemdata->m_id)));
+				ADODB::_RecordsetPtr subrecordset = subcommand->Execute(NULL, NULL, 0);
 
 				if(!subrecordset->EndOfFile)
 				{
@@ -867,12 +866,12 @@ public:
 			}
 		}
 
-		CComPtr<ADODB::_Command> subcommand;
-		subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ADODB::_CommandPtr subcommand;
+		subcommand.CreateInstance(__uuidof(ADODB::Command));
 		ATLASSERT(subcommand != NULL);
 		subcommand->ActiveConnection = m_connection;
 		subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=0";
-		CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+		ADODB::_RecordsetPtr subrecordset = subcommand->Execute(NULL, NULL, 0);
 
 		if(!subrecordset->EndOfFile)
 		{
@@ -1080,14 +1079,14 @@ public:
 
 			if(hitem == m_feedsRoot || isFolder)
 			{
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE Feeds SET FolderID=? WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(m_itemDrop))->m_id)));
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(m_itemDrag))->m_id)));
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(m_itemDrop))->m_id)));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(m_itemDrag))->m_id)));
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 				m_treeView.Expand(m_itemDrop, TVE_EXPAND);
 				HTREEITEM htiNew = MoveChildItem(m_itemDrag, m_itemDrop, TVI_LAST);
 				m_treeView.DeleteItem(m_itemDrag);
@@ -1214,27 +1213,27 @@ public:
 				m_SrcBar.m_search.GetWindowText(search);
 
 			{
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 
 				if(feeddata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
 				}
 				else if(folderdata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
 				}
 				else
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued";
 				}
 
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 				if(!recordset->EndOfFile)
 				{
@@ -1344,27 +1343,27 @@ public:
 					WriteLine(hFile, "\t<div class=\"newspapertitle\">Headlines</div>");
 				}
 
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 
 				if(feeddata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued DESC";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
 				}
 				else if(folderdata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued DESC";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
 				}
 				else
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued DESC";
 				}
 
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 				if(!recordset->EndOfFile)
 				{
@@ -1450,28 +1449,28 @@ public:
 			{
 				FeedData* feeddata = dynamic_cast<FeedData*>(treedata);
 				feeddata->m_title = pTVDI->item.pszText;
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE Feeds SET Name=? WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(feeddata->m_title)));
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(feeddata->m_title)));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 				return TRUE;
 			}
 			else if(isFolder)
 			{
 				FolderData* folderdata = dynamic_cast<FolderData*>(treedata);
 				folderdata->m_name = pTVDI->item.pszText;
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE Folders SET Name=? WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(folderdata->m_name)));
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(folderdata->m_name)));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 				return TRUE;
 			}
 
@@ -1564,13 +1563,13 @@ public:
 
 			if(newsdata->m_unread)
 			{
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 				newsdata->m_unread = false;
 
 				if(newsdata->m_flagged)
@@ -1636,11 +1635,11 @@ public:
 
 			if(fp.m_type != CFeedParser::FPFT_UNKNOWN)
 			{
-				CComPtr<ADODB::_Recordset> recordset;
-				recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+				ADODB::_RecordsetPtr recordset;
+				recordset.CreateInstance(__uuidof(ADODB::Recordset));
 				ATLASSERT(recordset != NULL);
 				recordset->CursorLocation = ADODB::adUseServer;
-				recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+				recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 				recordset->AddNew();
 				recordset->Fields->GetItem("FolderID")->Value = 0;
 				recordset->Fields->GetItem("Title")->Value = _bstr_t(fp.m_title);
@@ -1681,11 +1680,11 @@ public:
 
 		if(dlg.DoModal() == IDOK)
 		{
-			CComPtr<ADODB::_Recordset> recordset;
-			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			ADODB::_RecordsetPtr recordset;
+			recordset.CreateInstance(__uuidof(ADODB::Recordset));
 			ATLASSERT(recordset != NULL);
 			recordset->CursorLocation = ADODB::adUseServer;
-			recordset->Open(_bstr_t("Folders"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+			recordset->Open(_bstr_t("Folders"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 			recordset->AddNew();
 			recordset->Fields->GetItem("Name")->Value = _bstr_t(dlg.m_value);
 			recordset->Update();
@@ -1711,34 +1710,34 @@ public:
 			if(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
 			{
 				{
-					CComPtr<ADODB::_Command> command;
-					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ADODB::_CommandPtr command;
+					command.CreateInstance(__uuidof(ADODB::Command));
 					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "DELETE FROM News WHERE FeedID=?";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
-					CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
+					ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 				}
 
 				{
-					CComPtr<ADODB::_Command> command;
-					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ADODB::_CommandPtr command;
+					command.CreateInstance(__uuidof(ADODB::Command));
 					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "DELETE FROM Feeds WHERE ID=?";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
-					CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
+					ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 				}
 			}
 			else if(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
 			{
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "DELETE FROM Folders WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
+				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 			}
 
 			delete (TreeData*)m_treeView.GetItemData(i);
@@ -1755,13 +1754,13 @@ public:
 
 		if(feeddata != NULL)
 		{
-			CComPtr<ADODB::_Command> command;
-			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
 			ATLASSERT(command != NULL);
 			command->ActiveConnection = m_connection;
 			command->CommandText = "SELECT * FROM Feeds WHERE ID=?";
 			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
-			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 			if(!recordset->EndOfFile)
 			{
@@ -1775,8 +1774,8 @@ public:
 
 				if(sheet.DoModal() == IDOK)
 				{
-					CComPtr<ADODB::_Command> subcommand;
-					subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ADODB::_CommandPtr subcommand;
+					subcommand.CreateInstance(__uuidof(ADODB::Command));
 					ATLASSERT(subcommand != NULL);
 					subcommand->ActiveConnection = m_connection;
 					subcommand->CommandText = "UPDATE Feeds SET Title=?, URL=?, RefreshInterval=?, MaxAge=?, NavigateURL=? WHERE ID=?";
@@ -1786,7 +1785,7 @@ public:
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, sheet.m_propertiesPage.m_retain));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, sheet.m_propertiesPage.m_browse));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
-					CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+					ADODB::_RecordsetPtr subrecordset = subcommand->Execute(NULL, NULL, 0);
 					feeddata->m_title = sheet.m_propertiesPage.m_title;
 					feeddata->m_navigateURL = sheet.m_propertiesPage.m_browse;
 					m_treeView.SetItemText(i, feeddata->m_title);
@@ -1838,13 +1837,13 @@ public:
 
 		if(newsdata != NULL && newsdata->m_unread)
 		{
-			CComPtr<ADODB::_Command> command;
-			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
 			ATLASSERT(command != NULL);
 			command->ActiveConnection = m_connection;
 			command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
-			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 			newsdata->m_unread = false;
 
 			if(newsdata->m_flagged)
@@ -1872,13 +1871,13 @@ public:
 
 		if(newsdata != NULL && !newsdata->m_unread)
 		{
-			CComPtr<ADODB::_Command> command;
-			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
 			ATLASSERT(command != NULL);
 			command->ActiveConnection = m_connection;
 			command->CommandText = "UPDATE News SET Unread='1' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
-			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 			newsdata->m_unread = true;
 
 			if(newsdata->m_flagged)
@@ -1906,13 +1905,13 @@ public:
 
 		if(newsdata != NULL && !newsdata->m_flagged)
 		{
-			CComPtr<ADODB::_Command> command;
-			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
 			ATLASSERT(command != NULL);
 			command->ActiveConnection = m_connection;
 			command->CommandText = "UPDATE News SET Flagged='1' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
-			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 			newsdata->m_flagged = true;
 
 			if(newsdata->m_flagged)
@@ -1935,13 +1934,13 @@ public:
 
 		if(newsdata != NULL && newsdata->m_flagged)
 		{
-			CComPtr<ADODB::_Command> command;
-			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
 			ATLASSERT(command != NULL);
 			command->ActiveConnection = m_connection;
 			command->CommandText = "UPDATE News SET Flagged='0' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
-			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 			newsdata->m_flagged = false;
 
 			if(newsdata->m_flagged)
@@ -2002,13 +2001,13 @@ public:
 
 				if(newsdata != NULL && newsdata->m_unread)
 				{
-					CComPtr<ADODB::_Command> command;
-					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ADODB::_CommandPtr command;
+					command.CreateInstance(__uuidof(ADODB::Command));
 					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
-					CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+					ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 					newsdata->m_unread = false;
 
 					if(newsdata->m_flagged)

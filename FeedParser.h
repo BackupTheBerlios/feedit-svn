@@ -205,6 +205,9 @@ public:
 						MSXML2::IXMLDOMNodePtr datenode = node->selectSingleNode(_bstr_t("date"));
 
 						if(datenode == NULL)
+							datenode = node->selectSingleNode(_bstr_t("dc:date"));
+
+						if(datenode == NULL)
 							datenode = node->selectSingleNode(_bstr_t("pubDate"));
 
 						FeedItem item;

@@ -21,8 +21,26 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_2CC40EBFEACA4F27B1CD189FDD32BF70"
+        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_359004C5271C4438A471A9B686B5FA3A"
         "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_4C5F45226BC2EE1B670E45740414857B"
+        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_92B77D0F76D3531D1F6D644B4004E86C"
+        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -95,6 +113,46 @@
         }
         "File"
         {
+            "{A582A373-4685-4296-BEFE-614B80A702C3}:_4C5F45226BC2EE1B670E45740414857B"
+            {
+            "SourcePath" = "8:comdlg32.dll"
+            "TargetName" = "8:comdlg32.dll"
+            "Tag" = "8:"
+            "Folder" = "8:_4D9029858F624EB690B8C260D9B2EB6A"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:TRUE"
+            "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
+            "{A582A373-4685-4296-BEFE-614B80A702C3}:_92B77D0F76D3531D1F6D644B4004E86C"
+            {
+            "SourcePath" = "8:VERSION.dll"
+            "TargetName" = "8:VERSION.dll"
+            "Tag" = "8:"
+            "Folder" = "8:_4D9029858F624EB690B8C260D9B2EB6A"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:TRUE"
+            "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
         }
         "FileType"
         {
@@ -157,13 +215,13 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:FeedIt"
-        "ProductCode" = "8:{8BEEC033-2E46-4E56-8B6C-CC5D8C837395}"
-        "PackageCode" = "8:{24ED1F3E-8DB3-4DED-986C-B1DBB8E58A8A}"
+        "ProductCode" = "8:{9E341899-1826-4C4F-8671-2EEF5AAFB4AB}"
+        "PackageCode" = "8:{9E082A76-851B-4236-AECD-13D4F7CE6DE1}"
         "UpgradeCode" = "8:{59802AAF-3F0D-4077-B709-B1C3E61AF01F}"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
-        "ProductVersion" = "8:1.0.1"
+        "ProductVersion" = "8:1.0.2"
         "Manufacturer" = "8:Sandro Tolaini"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
@@ -683,6 +741,20 @@
             "Feature" = "8:"
             "IsolateTo" = "8:"
             }
+            "{35A69C6E-5BA4-440D-803D-762B59A45393}:_2CC40EBFEACA4F27B1CD189FDD32BF70"
+            {
+            "UseDynamicProperties" = "11:TRUE"
+            "IsDependency" = "11:TRUE"
+            "SourcePath" = "8:vc_user_atl71_rtl_x86_---.msm"
+                "Properties"
+                {
+                }
+            "LanguageId" = "3:0"
+            "Exclude" = "11:FALSE"
+            "Folder" = "8:"
+            "Feature" = "8:"
+            "IsolateTo" = "8:"
+            }
             "{35A69C6E-5BA4-440D-803D-762B59A45393}:_359004C5271C4438A471A9B686B5FA3A"
             {
             "UseDynamicProperties" = "11:TRUE"
@@ -716,7 +788,7 @@
         {
             "{8062640A-2EEE-46E9-AB67-688E9A886E9F}:_EDEE28DA59EC4A19BB63EB1D078C036C"
             {
-            "SourcePath" = "8:..\\debug\\FeedIt.exe"
+            "SourcePath" = "8:..\\Debug\\FeedIt.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_4D9029858F624EB690B8C260D9B2EB6A"

@@ -180,10 +180,11 @@ CAPTION "About"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,130,81,50,14
-    CTEXT           "FeedIt %s\n\n(c) Copyright 2004\nSandro Tolaini",
-                    IDC_ABOUTTEXT,25,57,78,32
+    CTEXT           "FeedIt %s",IDC_ABOUTTEXT,25,50,78,8
     ICON            IDR_MAINFRAME,IDC_STATIC,55,26,20,20
     GROUPBOX        "",IDC_STATIC,7,7,115,88
+    LTEXT           "(C) 2004 Sandro Tolaini",IDC_STATIC,26,66,75,8
+    LTEXT           "sandro@focuseek.com",IDC_STATIC,27,78,74,8,SS_NOTIFY
 END
 
 IDD_STRING DIALOGEX 0, 0, 186, 67

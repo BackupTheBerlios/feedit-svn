@@ -10,6 +10,7 @@ public:
 	enum { IDD = IDD_ABOUTBOX };
 
 	CStatic m_aboutText;
+	CStatic m_email;
 
 	BEGIN_MSG_MAP(CAboutDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
@@ -25,6 +26,7 @@ public:
 	LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
 		m_aboutText.Attach(GetDlgItem(IDC_ABOUTTEXT));
+
 		TCHAR modulename[1024];
 		::GetModuleFileName(NULL, modulename, sizeof(modulename));
 		DWORD handle;

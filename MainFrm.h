@@ -472,6 +472,16 @@ public:
 
 					if(m_forceUpdate || t1+s1 < now)
 					{
+						int retain = recordset->Fields->GetItem("MaxAge")->Value;
+
+						if(retain == -1)
+							retain = GetConfiguration("DefaultMaxAge", 30);
+
+						COleDateTime age;
+
+						if(retain > 0)
+							age = now-COleDateTimeSpan(retain, 0, 0, 0);
+
 						CAtlString tmp;
 						tmp.Format("Checking for new items on %s...", (char*)(_bstr_t)recordset->Fields->GetItem("Title")->Value);
 						m_statusBar.SetPaneText(ID_DEFAULT_PANE, tmp);
@@ -480,16 +490,10 @@ public:
 						CFeedParser fp(url);
 
 						for(size_t i = 0; i < fp.m_items.GetCount(); ++i)
-							AddNewsToFeed(feedid, fp.m_items[i]);
-
-						int retain = recordset->Fields->GetItem("MaxAge")->Value;
-
-						if(retain == -1)
-							retain = GetConfiguration("DefaultMaxAge", 30);
+							AddNewsToFeed(feedid, fp.m_items[i], age);
 
 						if(retain > 0)
 						{
-							COleDateTime age = now-COleDateTimeSpan(retain, 0, 0, 0);
 							ADODB::_CommandPtr command;
 							command.CreateInstance(__uuidof(ADODB::Command));
 							ATLASSERT(command != NULL);
@@ -553,104 +557,107 @@ public:
 		return hNewItem;
 	}
 
-	void AddNewsToFeed(int feedid, const CFeedParser::FeedItem& item)
+	void AddNewsToFeed(int feedid, const CFeedParser::FeedItem& item, const COleDateTime& age)
 	{
-		try
+		COleDateTime dt;
+		dt.SetStatus(COleDateTime::invalid);
+		CAtlString t1((const char*)item.m_date);
+
+		if(t1.Mid(4, 1) == "-" && t1.Mid(7, 1) == "-")
 		{
-			COleDateTime dt;
-			dt.SetStatus(COleDateTime::invalid);
-			CAtlString t1((const char*)item.m_date);
+			dt.SetDateTime(atoi(t1.Mid(0, 4)), atoi(t1.Mid(5, 2)), atoi(t1.Mid(8, 2)), atoi(t1.Mid(11, 2)), atoi(t1.Mid(14, 2)), atoi(t1.Mid(17, 2)));
 
-			if(t1.Mid(4, 1) == "-" && t1.Mid(7, 1) == "-")
-			{
-				dt.SetDateTime(atoi(t1.Mid(0, 4)), atoi(t1.Mid(5, 2)), atoi(t1.Mid(8, 2)), atoi(t1.Mid(11, 2)), atoi(t1.Mid(14, 2)), atoi(t1.Mid(17, 2)));
+			if(t1.Mid(19, 1) == "+")
+				dt -= COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
 
-				if(t1.Mid(19, 1) == "+")
-					dt -= COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
-
-				if(t1.Mid(19, 1) == "-")
-					dt += COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
-			}
-			else if(t1.Mid(3, 1) == "," && t1.Mid(4, 1) == " ")
-			{
-				int pos = 0;
-				CAtlString tok = t1.Tokenize(" ,:", pos);
-				int dbuf[6] = { 0 };
-				int dpos = 0;
-
-				while(tok != "" && dpos < 6)
-				{
-					int v = atoi(tok);
-
-					if(v == 0)
-					{
-						if(tok == "Jan")
-							v = 1;
-						else if(tok == "Feb")
-							v = 2;
-						else if(tok == "Mar")
-							v = 3;
-						else if(tok == "Apr")
-							v = 4;
-						else if(tok == "May")
-							v = 5;
-						else if(tok == "Jun")
-							v = 6;
-						else if(tok == "Jul")
-							v = 7;
-						else if(tok == "Aug")
-							v = 8;
-						else if(tok == "Sep")
-							v = 9;
-						else if(tok == "Oct")
-							v = 10;
-						else if(tok == "Nov")
-							v = 11;
-						else if(tok == "Dec")
-							v = 12;
-					}
-
-					if(v > 0 || (dpos >= 3 && v >= 0))
-						dbuf[dpos++] = v;
-
-					tok = t1.Tokenize(" ,:", pos);
-				}
-
-				dt.SetDateTime(dbuf[2], dbuf[1], dbuf[0], dbuf[3], dbuf[4], dbuf[5]);
-
-				if(tok.Left(4) == "GMT+")
-				{
-					dt -= COleDateTimeSpan(0, atoi(tok.Mid(4)), 0, 0);
-				}
-				else if(tok.Left(4) == "GMT-")
-				{
-					dt += COleDateTimeSpan(0, atoi(tok.Mid(4)), 0, 0);
-				}
-			}
-
-			if(dt.GetStatus() == COleDateTime::invalid)
-				dt = COleDateTime::GetCurrentTime();
-
-			CAtlString t2 = dt.Format("%Y/%m/%d %H:%M:%S");
-
-			ADODB::_RecordsetPtr recordset;
-			recordset.CreateInstance(__uuidof(ADODB::Recordset));
-			ATLASSERT(recordset != NULL);
-			recordset->CursorLocation = ADODB::adUseServer;
-			recordset->Open(_bstr_t("News"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
-			recordset->AddNew();
-			recordset->Fields->GetItem("FeedID")->Value = feedid;
-			recordset->Fields->GetItem("Title")->Value = (_bstr_t)item.m_title;
-			recordset->Fields->GetItem("URL")->Value = (_bstr_t)item.m_url;
-			recordset->Fields->GetItem("Description")->Value = (_bstr_t)item.m_description;
-			recordset->Fields->GetItem("Issued")->Value = _bstr_t(t2);
-			recordset->Fields->GetItem("Unread")->Value = _bstr_t("1");
-			recordset->Fields->GetItem("Flagged")->Value = _bstr_t("0");
-			recordset->Update();
-			++m_newItems;
+			if(t1.Mid(19, 1) == "-")
+				dt += COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
 		}
-		catch(...)
+		else if(t1.Mid(3, 1) == "," && t1.Mid(4, 1) == " ")
 		{
+			int pos = 0;
+			CAtlString tok = t1.Tokenize(" ,:", pos);
+			int dbuf[6] = { 0 };
+			int dpos = 0;
+
+			while(tok != "" && dpos < 6)
+			{
+				int v = atoi(tok);
+
+				if(v == 0)
+				{
+					if(tok == "Jan")
+						v = 1;
+					else if(tok == "Feb")
+						v = 2;
+					else if(tok == "Mar")
+						v = 3;
+					else if(tok == "Apr")
+						v = 4;
+					else if(tok == "May")
+						v = 5;
+					else if(tok == "Jun")
+						v = 6;
+					else if(tok == "Jul")
+						v = 7;
+					else if(tok == "Aug")
+						v = 8;
+					else if(tok == "Sep")
+						v = 9;
+					else if(tok == "Oct")
+						v = 10;
+					else if(tok == "Nov")
+						v = 11;
+					else if(tok == "Dec")
+						v = 12;
+				}
+
+				if(v > 0 || (dpos >= 3 && v >= 0))
+					dbuf[dpos++] = v;
+
+				tok = t1.Tokenize(" ,:", pos);
+			}
+
+			dt.SetDateTime(dbuf[2], dbuf[1], dbuf[0], dbuf[3], dbuf[4], dbuf[5]);
+
+			if(tok.Left(4) == "GMT+")
+			{
+				dt -= COleDateTimeSpan(0, atoi(tok.Mid(4)), 0, 0);
+			}
+			else if(tok.Left(4) == "GMT-")
+			{
+				dt += COleDateTimeSpan(0, atoi(tok.Mid(4)), 0, 0);
+			}
+		}
+
+		if(dt.GetStatus() == COleDateTime::invalid)
+			dt = COleDateTime::GetCurrentTime();
+
+		CAtlString t2 = dt.Format("%Y/%m/%d %H:%M:%S");
+
+		if(dt > age)
+		{
+			try
+			{
+				ADODB::_RecordsetPtr recordset;
+				recordset.CreateInstance(__uuidof(ADODB::Recordset));
+				ATLASSERT(recordset != NULL);
+				recordset->CursorLocation = ADODB::adUseServer;
+				recordset->Open(_bstr_t("News"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+				recordset->AddNew();
+				recordset->Fields->GetItem("FeedID")->Value = feedid;
+				recordset->Fields->GetItem("Title")->Value = (_bstr_t)item.m_title;
+				recordset->Fields->GetItem("URL")->Value = (_bstr_t)item.m_url;
+				recordset->Fields->GetItem("Description")->Value = (_bstr_t)item.m_description;
+				recordset->Fields->GetItem("Issued")->Value = _bstr_t(t2);
+				recordset->Fields->GetItem("Unread")->Value = _bstr_t("1");
+				recordset->Fields->GetItem("Flagged")->Value = _bstr_t("0");
+				recordset->Update();
+				++m_newItems;
+			}
+			catch(...)
+			{
+			}
 		}
 	}
 

@@ -36,27 +36,25 @@
 #define ID_FILE_NEW_FOLDER              32773
 #define ID_FILE_DELETE                  32774
 #define ID_SHOW                         32778
-#define ID_ACTIONS_MARKREAD             32779
-#define ID_ACTIONS_MARKUNREAD           32780
 #define ID_ACTIONS_BACK                 32784
 #define ID_ACTIONS_FORWARD              32785
 #define ID_VIEW_PROPERTIES              32789
 #define ID_ACTIONS_SENDMAIL             32794
 #define ID_ACTIONS_MARKALLREAD          32798
-#define ID_ACTIONS_MARKFLAGGED          32806
-#define ID_ACTIONS_MARKUNFLAGGED        32808
 #define ID_VIEW_OPTIONS                 32809
 #define ID_ACTIONS_UPDATEFEEDS          32810
 #define ID_VIEW_CUSTOMIZETOOLBAR        32812
 #define ID_FILE_EXPORT_OPML             32814
 #define ID_FILE_IMPORT_OPML             32815
+#define ID_ACTIONS_TOGGLEFLAGGED        32817
+#define ID_ACTIONS_TOGGLEUNREAD         32818
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        212
-#define _APS_NEXT_COMMAND_VALUE         32816
+#define _APS_NEXT_COMMAND_VALUE         32819
 #define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

@@ -101,10 +101,8 @@ BEGIN
     POPUP "&Actions"
     BEGIN
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
-        MENUITEM "Mark as r&ead",               ID_ACTIONS_MARKREAD
-        MENUITEM "Mark as &unread",             ID_ACTIONS_MARKUNREAD
-        MENUITEM "Mark as &flagged",            ID_ACTIONS_MARKFLAGGED
-        MENUITEM "Mark as u&nflagged",          ID_ACTIONS_MARKUNFLAGGED
+        MENUITEM "Toggle &unread",              32818
+        MENUITEM "Toggle &flagged",             ID_ACTIONS_TOGGLEFLAGGED
         MENUITEM SEPARATOR
         MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKALLREAD
         MENUITEM "U&pdate all feeds",           ID_ACTIONS_UPDATEFEEDS
@@ -153,10 +151,8 @@ BEGIN
     POPUP ""
     BEGIN
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
-        MENUITEM "Mark as r&ead",               ID_ACTIONS_MARKREAD
-        MENUITEM "Mark as &unread",             ID_ACTIONS_MARKUNREAD
-        MENUITEM "Mark as &flagged",            32806
-        MENUITEM "Mark as u&nflagged",          32808
+        MENUITEM "Toggle &unread",              ID_ACTIONS_TOGGLEUNREAD
+        MENUITEM "Toggle &flagged",             32817
     END
 END
 
@@ -449,8 +445,6 @@ BEGIN
     ID_FILE_NEW_FOLDER      "Add new folder\nNew folder"
     ID_FILE_DELETE          "Delete current item\nDelete"
     ID_SHOW                 "Show application window\nShow"
-    ID_ACTIONS_MARKREAD     "Mark item as read\nMark as read"
-    ID_ACTIONS_MARKUNREAD   "Mark item as unread\nMark as unread"
 END
 
 STRINGTABLE 
@@ -464,13 +458,17 @@ END
 
 STRINGTABLE 
 BEGIN
-    ID_ACTIONS_MARKFLAGGED  "Mark item as flagged\nMark as flagged"
-    ID_ACTIONS_MARKUNFLAGGED "Mark item as unflagged\nMark as unflagged"
     ID_VIEW_OPTIONS         "Edit program options\nOptions"
     ID_ACTIONS_UPDATEFEEDS  "Update all feeds\nUpdate feeds"
     ID_VIEW_CUSTOMIZETOOLBAR "Customize toolbar buttons\nCustomize toolbar"
     ID_FILE_EXPORT_OPML     "Export OPML file\nExport OPML"
     ID_FILE_IMPORT_OPML     "Import OPML file\nImport OPML"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_ACTIONS_TOGGLEFLAGGED "Toggle flagged message status\nToggle flagged"
+    ID_ACTIONS_TOGGLEUNREAD "Toggle unread message status\nToggle unread"
 END
 
 #endif    // English (U.S.) resources

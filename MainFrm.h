@@ -350,37 +350,14 @@ public:
 		if(j >= 0)
 		{
 			UISetState(ID_ACTIONS_SENDMAIL, UPDUI_ENABLED);
-			NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(j));
-
-			if(newsdata->m_unread)
-			{
-				UISetState(ID_ACTIONS_MARKREAD, UPDUI_ENABLED);
-				UISetState(ID_ACTIONS_MARKUNREAD, UPDUI_DISABLED);
-			}
-			else
-			{
-				UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
-				UISetState(ID_ACTIONS_MARKUNREAD, UPDUI_ENABLED);
-			}
-
-			if(newsdata->m_flagged)
-			{
-				UISetState(ID_ACTIONS_MARKFLAGGED, UPDUI_DISABLED);
-				UISetState(ID_ACTIONS_MARKUNFLAGGED, UPDUI_ENABLED);
-			}
-			else
-			{
-				UISetState(ID_ACTIONS_MARKFLAGGED, UPDUI_ENABLED);
-				UISetState(ID_ACTIONS_MARKUNFLAGGED, UPDUI_DISABLED);
-			}
+			UISetState(ID_ACTIONS_TOGGLEUNREAD, UPDUI_ENABLED);
+			UISetState(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_ENABLED);
 		}
 		else
 		{
 			UISetState(ID_ACTIONS_SENDMAIL, UPDUI_DISABLED);
-			UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
-			UISetState(ID_ACTIONS_MARKUNREAD, UPDUI_DISABLED);
-			UISetState(ID_ACTIONS_MARKFLAGGED, UPDUI_DISABLED);
-			UISetState(ID_ACTIONS_MARKUNFLAGGED, UPDUI_DISABLED);
+			UISetState(ID_ACTIONS_TOGGLEUNREAD, UPDUI_DISABLED);
+			UISetState(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_DISABLED);
 		}
 
 		UIUpdateToolBar();
@@ -393,10 +370,8 @@ public:
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_VIEW_PROPERTIES, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_SENDMAIL, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
-		UPDATE_ELEMENT(ID_ACTIONS_MARKREAD, UPDUI_MENUPOPUP)
-		UPDATE_ELEMENT(ID_ACTIONS_MARKUNREAD, UPDUI_MENUPOPUP)
-		UPDATE_ELEMENT(ID_ACTIONS_MARKFLAGGED, UPDUI_MENUPOPUP)
-		UPDATE_ELEMENT(ID_ACTIONS_MARKUNFLAGGED, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEUNREAD, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_ACTIONS_MARKALLREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_BACK, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_FORWARD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
@@ -425,10 +400,8 @@ public:
 		COMMAND_ID_HANDLER(ID_VIEW_OPTIONS, OnViewOptions)
 		COMMAND_ID_HANDLER(ID_VIEW_CUSTOMIZETOOLBAR, OnViewCustomizeToolbar)
 		COMMAND_ID_HANDLER(ID_ACTIONS_SENDMAIL, OnActionsSendMail)
-		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
-		COMMAND_ID_HANDLER(ID_ACTIONS_MARKUNREAD, OnActionsMarkUnread)
-		COMMAND_ID_HANDLER(ID_ACTIONS_MARKFLAGGED, OnActionsMarkFlagged)
-		COMMAND_ID_HANDLER(ID_ACTIONS_MARKUNFLAGGED, OnActionsMarkUnflagged)
+		COMMAND_ID_HANDLER(ID_ACTIONS_TOGGLEUNREAD, OnActionsToggleUnread)
+		COMMAND_ID_HANDLER(ID_ACTIONS_TOGGLEFLAGGED, OnActionsToggleFlagged)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKALLREAD, OnActionsMarkAllRead)
 		COMMAND_ID_HANDLER(ID_ACTIONS_UPDATEFEEDS, OnActionsUpdateFeeds)
 		COMMAND_ID_HANDLER(ID_ACTIONS_BACK, OnActionsBack)
@@ -2099,132 +2072,6 @@ public:
 		return 0;
 	}
 
-	LRESULT OnActionsMarkRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-	{
-		int idx = m_listView.GetSelectedIndex();
-		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
-
-		if(newsdata != NULL && newsdata->m_unread)
-		{
-			ADODB::_CommandPtr command;
-			command.CreateInstance(__uuidof(ADODB::Command));
-			ATLASSERT(command != NULL);
-			command->ActiveConnection = m_connection;
-			command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
-			newsdata->m_unread = false;
-
-			if(newsdata->m_flagged)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 2, 0, 0, 0);
-			else if(newsdata->m_unread)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 1, 0, 0, 0);
-			else
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
-
-			FeedData* feeddata = dynamic_cast<FeedData*>((FeedData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
-			feeddata->m_unread--;
-			CAtlString txt;
-			m_treeView.GetItemText(newsdata->m_feedTreeItem, txt);
-			m_treeView.SetItemText(newsdata->m_feedTreeItem, txt);
-			m_listView.Invalidate();
-		}
-
-		return 0;
-	}
-
-	LRESULT OnActionsMarkUnread(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-	{
-		int idx = m_listView.GetSelectedIndex();
-		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
-
-		if(newsdata != NULL && !newsdata->m_unread)
-		{
-			ADODB::_CommandPtr command;
-			command.CreateInstance(__uuidof(ADODB::Command));
-			ATLASSERT(command != NULL);
-			command->ActiveConnection = m_connection;
-			command->CommandText = "UPDATE News SET Unread='1' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
-			newsdata->m_unread = true;
-
-			if(newsdata->m_flagged)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 2, 0, 0, 0);
-			else if(newsdata->m_unread)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 1, 0, 0, 0);
-			else
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
-
-			FeedData* feeddata = dynamic_cast<FeedData*>((FeedData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
-			feeddata->m_unread++;
-			CAtlString txt;
-			m_treeView.GetItemText(newsdata->m_feedTreeItem, txt);
-			m_treeView.SetItemText(newsdata->m_feedTreeItem, txt);
-			m_listView.Invalidate();
-		}
-
-		return 0;
-	}
-
-	LRESULT OnActionsMarkFlagged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-	{
-		int idx = m_listView.GetSelectedIndex();
-		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
-
-		if(newsdata != NULL && !newsdata->m_flagged)
-		{
-			ADODB::_CommandPtr command;
-			command.CreateInstance(__uuidof(ADODB::Command));
-			ATLASSERT(command != NULL);
-			command->ActiveConnection = m_connection;
-			command->CommandText = "UPDATE News SET Flagged='1' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
-			newsdata->m_flagged = true;
-
-			if(newsdata->m_flagged)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 2, 0, 0, 0);
-			else if(newsdata->m_unread)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 1, 0, 0, 0);
-			else
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
-
-			m_listView.Invalidate();
-		}
-
-		return 0;
-	}
-
-	LRESULT OnActionsMarkUnflagged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-	{
-		int idx = m_listView.GetSelectedIndex();
-		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
-
-		if(newsdata != NULL && newsdata->m_flagged)
-		{
-			ADODB::_CommandPtr command;
-			command.CreateInstance(__uuidof(ADODB::Command));
-			ATLASSERT(command != NULL);
-			command->ActiveConnection = m_connection;
-			command->CommandText = "UPDATE News SET Flagged='0' WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
-			newsdata->m_flagged = false;
-
-			if(newsdata->m_flagged)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 2, 0, 0, 0);
-			else if(newsdata->m_unread)
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 1, 0, 0, 0);
-			else
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
-
-			m_listView.Invalidate();
-		}
-
-		return 0;
-	}
-
 	LRESULT OnActionsSendMail(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		int idx = m_listView.GetSelectedIndex();
@@ -2251,6 +2098,84 @@ public:
 
 				::FreeLibrary(hMAPILib);
 			}
+		}
+
+		return 0;
+	}
+
+	LRESULT OnActionsToggleUnread(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		int idx = m_listView.GetSelectedIndex();
+		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+		if(newsdata != NULL)
+		{
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
+			ATLASSERT(command != NULL);
+			command->ActiveConnection = m_connection;
+
+			if(newsdata->m_unread)
+				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
+			else
+				command->CommandText = "UPDATE News SET Unread='1' WHERE ID=?";
+
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+			newsdata->m_unread = !newsdata->m_unread;
+
+			if(newsdata->m_flagged)
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 2, 0, 0, 0);
+			else if(newsdata->m_unread)
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 1, 0, 0, 0);
+			else
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
+
+			FeedData* feeddata = dynamic_cast<FeedData*>((FeedData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
+
+			if(newsdata->m_unread)
+				feeddata->m_unread++;
+			else
+				feeddata->m_unread--;
+
+			CAtlString txt;
+			m_treeView.GetItemText(newsdata->m_feedTreeItem, txt);
+			m_treeView.SetItemText(newsdata->m_feedTreeItem, txt);
+			m_listView.Invalidate();
+		}
+
+		return 0;
+	}
+
+	LRESULT OnActionsToggleFlagged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		int idx = m_listView.GetSelectedIndex();
+		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+		if(newsdata != NULL)
+		{
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
+			ATLASSERT(command != NULL);
+			command->ActiveConnection = m_connection;
+
+			if(newsdata->m_flagged)
+				command->CommandText = "UPDATE News SET Flagged='0' WHERE ID=?";
+			else
+				command->CommandText = "UPDATE News SET Flagged='1' WHERE ID=?";
+
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
+			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+			newsdata->m_flagged = !newsdata->m_flagged;
+
+			if(newsdata->m_flagged)
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 2, 0, 0, 0);
+			else if(newsdata->m_unread)
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 1, 0, 0, 0);
+			else
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
+
+			m_listView.Invalidate();
 		}
 
 		return 0;

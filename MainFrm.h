@@ -62,9 +62,11 @@ public:
 		{
 			CComPtr<ADOX::_Catalog> catalog;
 			catalog.CoCreateInstance(CComBSTR("ADOX.Catalog"));
+			ATLASSERT(catalog != NULL);
 			catalog->Create(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath);
 			CComPtr<ADODB::_Connection> connection;
 			connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
+			ATLASSERT(connection != NULL);
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
 			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
@@ -127,6 +129,7 @@ public:
 				CAtlMap<int, bool> entrymap;
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "SELECT * FROM News WHERE FeedID=? ORDER BY Issued";
 				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
@@ -289,6 +292,7 @@ public:
 		::CoInitialize(NULL);
 		CComPtr<ADODB::_Recordset> recordset;
 		recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+		ATLASSERT(recordset != NULL);
 		recordset->CursorLocation = ADODB::adUseServer;
 		SYSTEMTIME t;
 		::GetSystemTime(&t);
@@ -360,6 +364,7 @@ public:
 	{
 		CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
 		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
+		ATLASSERT(xmldocument != NULL);
 		xmldocument->async = FALSE;
 		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
 		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:atom=\"http://purl.org/atom/ns#\""));
@@ -432,6 +437,7 @@ public:
 
 			CComPtr<ADODB::_Recordset> recordset;
 			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			ATLASSERT(recordset != NULL);
 			recordset->CursorLocation = ADODB::adUseServer;
 			recordset->Open(_bstr_t("News"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 			recordset->AddNew();
@@ -454,6 +460,7 @@ public:
 	{
 		CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
 		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
+		ATLASSERT(xmldocument != NULL);
 		xmldocument->async = FALSE;
 		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
 		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:atom=\"http://purl.org/atom/ns#\""));
@@ -540,6 +547,7 @@ public:
 	{
 		CComPtr<ADODB::_Command> command;
 		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT COUNT(*) AS ItemCount FROM News WHERE FeedID=? AND Unread='1'";
 		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feedid)));
@@ -642,9 +650,11 @@ public:
 		m_treeView.SetItemImage(m_feedsRoot, 1, 1);
 
 		m_connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
+		ATLASSERT(m_connection != NULL);
 		m_connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
 		CComPtr<ADODB::_Command> command;
 		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Folders";
 		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
@@ -663,6 +673,7 @@ public:
 				m_treeView.SetItemData(folderitem, (DWORD_PTR)folderitemdata);
 				CComPtr<ADODB::_Command> subcommand;
 				subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(subcommand != NULL);
 				subcommand->ActiveConnection = m_connection;
 				subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=?";
 				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderitemdata->m_id)));
@@ -692,6 +703,7 @@ public:
 
 		CComPtr<ADODB::_Command> subcommand;
 		subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ATLASSERT(subcommand != NULL);
 		subcommand->ActiveConnection = m_connection;
 		subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=0";
 		CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
@@ -890,6 +902,7 @@ public:
 			{
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE Feeds SET FolderID=? WHERE ID=?";
 				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(m_itemDrop))->m_id)));
@@ -946,6 +959,7 @@ public:
 		{
 			CComPtr<ADODB::_Command> command;
 			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ATLASSERT(command != NULL);
 			command->ActiveConnection = m_connection;
 			command->CommandText = "SELECT * FROM News WHERE FeedID=? ORDER BY Issued";
 			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
@@ -997,6 +1011,7 @@ public:
 			{
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
 				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
@@ -1053,6 +1068,7 @@ public:
 			CAtlString name = SniffFeedName((BSTR)CComBSTR(dlg.m_value));
 			CComPtr<ADODB::_Recordset> recordset;
 			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			ATLASSERT(recordset != NULL);
 			recordset->CursorLocation = ADODB::adUseServer;
 			recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 			recordset->AddNew();
@@ -1090,6 +1106,7 @@ public:
 		{
 			CComPtr<ADODB::_Recordset> recordset;
 			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			ATLASSERT(recordset != NULL);
 			recordset->CursorLocation = ADODB::adUseServer;
 			recordset->Open(_bstr_t("Folders"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 			recordset->AddNew();
@@ -1119,6 +1136,7 @@ public:
 				{
 					CComPtr<ADODB::_Command> command;
 					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "DELETE FROM News WHERE FeedID=?";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
@@ -1128,6 +1146,7 @@ public:
 				{
 					CComPtr<ADODB::_Command> command;
 					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "DELETE FROM Feeds WHERE ID=?";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
@@ -1138,6 +1157,7 @@ public:
 			{
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "DELETE FROM Folders WHERE ID=?";
 				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
@@ -1161,6 +1181,7 @@ public:
 			{
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
 				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));

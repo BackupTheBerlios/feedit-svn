@@ -38,6 +38,7 @@ public:
 	BOOL m_mustRefresh;
 	int m_newItems;
 	HTREEITEM m_feedsRoot;
+	HTREEITEM m_searchRoot;
 	HTREEITEM m_itemDrag;
 	HTREEITEM m_itemDrop;
 	HCURSOR m_arrowCursor;
@@ -46,7 +47,7 @@ public:
 	HANDLE m_hTimer;
 
 	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_mustRefresh(FALSE), m_newItems(0),
-		m_feedsRoot(NULL), m_itemDrag(NULL), m_itemDrop(NULL), m_arrowCursor(LoadCursor(NULL, IDC_ARROW)),
+		m_feedsRoot(NULL), m_searchRoot(NULL), m_itemDrag(NULL), m_itemDrop(NULL), m_arrowCursor(LoadCursor(NULL, IDC_ARROW)),
 		m_noCursor(LoadCursor(NULL, IDC_NO))
 	{
 		::SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, m_dbPath);
@@ -409,12 +410,13 @@ public:
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(ID_NEXT_PANE, OnNextPane)
 		COMMAND_ID_HANDLER(ID_PREV_PANE, OnPrevPane)
-		CHAIN_MSG_MAP_MEMBER(m_SrcBar)
+		//CHAIN_MSG_MAP_MEMBER(m_SrcBar)
 		CHAIN_MSG_MAP_MEMBER(m_treeView)
 		CHAIN_MSG_MAP_MEMBER(m_listView)
 		CHAIN_MSG_MAP(CTrayIconImpl<CMainFrame>)
 		CHAIN_MSG_MAP(CUpdateUI<CMainFrame>)
 		CHAIN_MSG_MAP(CFrameWindowImpl<CMainFrame>)
+		COMMAND_ID_HANDLER(IDC_SEARCH, OnSearch)
 	END_MSG_MAP()
 
 	BEGIN_COM_MAP(CMainFrame)
@@ -581,7 +583,7 @@ public:
 							v = 12;
 					}
 
-					if(v > 0)
+					if(v > 0 || (dpos >= 3 && v >= 0))
 						dbuf[dpos++] = v;
 
 					tok = t1.Tokenize(" ,:", pos);
@@ -784,6 +786,7 @@ public:
 
 		m_feedsRoot = m_treeView.InsertItem(_T("Feeds"), TVI_ROOT, TVI_LAST);
 		m_treeView.SetItemImage(m_feedsRoot, 1, 1);
+		m_searchRoot = m_treeView.InsertItem(_T("Search results"), TVI_ROOT, TVI_LAST);
 
 		m_connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
 		ATLASSERT(m_connection != NULL);
@@ -1172,8 +1175,13 @@ public:
 		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
 
-		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
+		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot || i == m_searchRoot)
 		{
+			CAtlString search;
+
+			if(i == m_searchRoot)
+				m_SrcBar.m_search.GetWindowText(search);
+
 			{
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
@@ -1203,35 +1211,39 @@ public:
 
 					while(!recordset->EndOfFile)
 					{
-						NewsData* newsdata = new NewsData();
-						newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
-						newsdata->m_url = recordset->Fields->GetItem("News.URL")->Value;
-						newsdata->m_title = recordset->Fields->GetItem("News.Title")->Value;
-						newsdata->m_description = recordset->Fields->GetItem("News.Description")->Value;
-						newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
-						newsdata->m_feedTreeItem = GetFeedTreeItem(recordset->Fields->GetItem("Feeds.ID")->Value);
-						FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
+						if(i != m_searchRoot || CheckSearchResult(search, CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value), CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value)))
+						{
+							NewsData* newsdata = new NewsData();
+							newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
+							newsdata->m_url = recordset->Fields->GetItem("News.URL")->Value;
+							newsdata->m_title = recordset->Fields->GetItem("News.Title")->Value;
+							newsdata->m_description = recordset->Fields->GetItem("News.Description")->Value;
+							newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
+							newsdata->m_feedTreeItem = GetFeedTreeItem(recordset->Fields->GetItem("Feeds.ID")->Value);
+							FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
 
-						if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("0"))
-							newsdata->m_unread = false;
-						else
-							newsdata->m_unread = true;
+							if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("0"))
+								newsdata->m_unread = false;
+							else
+								newsdata->m_unread = true;
 
-						if((_bstr_t)recordset->Fields->GetItem("Flagged")->Value == _bstr_t("0"))
-							newsdata->m_flagged = false;
-						else
-							newsdata->m_flagged = true;
+							if((_bstr_t)recordset->Fields->GetItem("Flagged")->Value == _bstr_t("0"))
+								newsdata->m_flagged = false;
+							else
+								newsdata->m_flagged = true;
 
-						if(newsdata->m_flagged)
-							m_listView.InsertItem(0, newsdata->m_issued, 2);
-						else if(newsdata->m_unread)
-							m_listView.InsertItem(0, newsdata->m_issued, 1);
-						else
-							m_listView.InsertItem(0, newsdata->m_issued, 0);
+							if(newsdata->m_flagged)
+								m_listView.InsertItem(0, newsdata->m_issued, 2);
+							else if(newsdata->m_unread)
+								m_listView.InsertItem(0, newsdata->m_issued, 1);
+							else
+								m_listView.InsertItem(0, newsdata->m_issued, 0);
 
-						m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("News.Title")->Value));
-						m_listView.AddItem(0, 2, feeddata->m_title);
-						m_listView.SetItemData(0, (DWORD_PTR)newsdata);
+							m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("News.Title")->Value));
+							m_listView.AddItem(0, 2, feeddata->m_title);
+							m_listView.SetItemData(0, (DWORD_PTR)newsdata);
+						}
+
 						recordset->MoveNext();
 					}
 				}
@@ -1288,6 +1300,10 @@ public:
 					tmp.Format("\t<div class=\"newspapertitle\">%s</div>", folderdata->m_name);
 					WriteLine(hFile, tmp);
 				}
+				else if(i == m_searchRoot)
+				{
+					WriteLine(hFile, "\t<div class=\"newspapertitle\">Search results</div>");
+				}
 				else
 				{
 					WriteLine(hFile, "\t<div class=\"newspapertitle\">Headlines</div>");
@@ -1322,25 +1338,29 @@ public:
 
 					while(!recordset->EndOfFile)
 					{
-						if(x % 2 == 0)
-							WriteLine(hFile, "<table width=\"100%\"><tr><td width=\"90%\">");
-						else
-							WriteLine(hFile, "<table width=\"100%\"><tr><td width=\"10%\">&nbsp;</td><td width=\"75%\">");
+						if(i != m_searchRoot || CheckSearchResult(search, CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value), CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value)))
+						{
+							if(x % 2 == 0)
+								WriteLine(hFile, "<table width=\"100%\"><tr><td width=\"90%\">");
+							else
+								WriteLine(hFile, "<table width=\"100%\"><tr><td width=\"10%\">&nbsp;</td><td width=\"75%\">");
 
-						CAtlString tmp;
-						tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>", (const char*)(_bstr_t)recordset->Fields->GetItem("News.URL")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value);
-						WriteLine(hFile, tmp);
-						tmp.Format("\t<div class=\"newsitemcontent\">%s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value);
-						WriteLine(hFile, tmp);
-						tmp.Format("\t<div class=\"newsitemfooter\">%s - Received %s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("Feeds.Title")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("Issued")->Value);
-						WriteLine(hFile, tmp);
+							CAtlString tmp;
+							tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>", (const char*)(_bstr_t)recordset->Fields->GetItem("News.URL")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value);
+							WriteLine(hFile, tmp);
+							tmp.Format("\t<div class=\"newsitemcontent\">%s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value);
+							WriteLine(hFile, tmp);
+							tmp.Format("\t<div class=\"newsitemfooter\">%s - Received %s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("Feeds.Title")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("Issued")->Value);
+							WriteLine(hFile, tmp);
 
-						if(x % 2 == 0)
-							WriteLine(hFile, "</td><td width=\"10%\">&nbsp;</td></tr></table>");
-						else
-							WriteLine(hFile, "</td></tr></table>");
+							if(x % 2 == 0)
+								WriteLine(hFile, "</td><td width=\"10%\">&nbsp;</td></tr></table>");
+							else
+								WriteLine(hFile, "</td></tr></table>");
 
-						++x;
+							++x;
+						}
+
 						recordset->MoveNext();
 					}
 				}
@@ -1355,6 +1375,17 @@ public:
 		_variant_t v;
 		m_htmlCtrl->Navigate2(&url, &v, &v, &v, &v);
 		return 0;
+	}
+
+	bool CheckSearchResult(CAtlString& search, CAtlString& title, CAtlString& description)
+	{
+		CAtlString s = search.MakeLower();
+		CAtlString t = title.MakeLower()+description.MakeLower();
+
+		if(s.GetLength() > 0 && t.Find(s) >= 0)
+			return true;
+		else
+			return false;
 	}
 
 	LRESULT OnTreeBeginLabelEdit(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -1523,6 +1554,13 @@ public:
 			}
 		}
 
+		return 0;
+	}
+
+	LRESULT OnSearch(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		m_treeView.SelectItem(NULL);
+		m_treeView.SelectItem(m_searchRoot);
 		return 0;
 	}
 

@@ -7,9 +7,12 @@ class CSearchBand :
 public:
 	enum { IDD = IDD_SEARCH_BAND };
 
+	CEdit m_search;
+
 	BEGIN_MSG_MAP(CSearchBand)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
 		CHAIN_MSG_MAP(CDialogResize<CSearchBand>)
+		FORWARD_NOTIFICATIONS()
 	END_MSG_MAP()
 
 	BEGIN_DLGRESIZE_MAP(CSearchBand)
@@ -33,6 +36,7 @@ public:
 	LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
 		DlgResize_Init(false, false);
+		m_search.Attach(GetDlgItem(IDC_SEARCHTEXT));
 		return TRUE;
 	}
 };

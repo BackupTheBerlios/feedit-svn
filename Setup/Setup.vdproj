@@ -15,6 +15,12 @@
     {
         "Entry"
         {
+        "MsmKey" = "8:_075B1D953207458DA986D9A8C876EAC2"
+        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_19570AE8CCBA41699EA18957703662DE"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -27,6 +33,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_92B77D0F76D3531D1F6D644B4004E86C"
+        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_CEFCE3AD40CC412CBBDF88C93E15F952"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -35,12 +47,6 @@
         {
         "MsmKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
         "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_FB3F2621F12E4CF99BFBC213CF7D41BB"
-        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
         "MsmSig" = "8:_UNDEFINED"
         }
     }
@@ -101,6 +107,26 @@
         }
         "File"
         {
+            "{A582A373-4685-4296-BEFE-614B80A702C3}:_92B77D0F76D3531D1F6D644B4004E86C"
+            {
+            "SourcePath" = "8:VERSION.dll"
+            "TargetName" = "8:VERSION.dll"
+            "Tag" = "8:"
+            "Folder" = "8:_4D9029858F624EB690B8C260D9B2EB6A"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:TRUE"
+            "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
         }
         "FileType"
         {
@@ -156,8 +182,8 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:FeedIt"
-        "ProductCode" = "8:{889AD773-4171-4D28-B31F-76F8EE77E7A1}"
-        "PackageCode" = "8:{FAC6A034-F0A4-439B-A05E-B863D1E6586E}"
+        "ProductCode" = "8:{1C977BBD-CFBF-42C5-9718-DE6E8EBFA3BF}"
+        "PackageCode" = "8:{444CEC84-8FC5-4DAF-ABA9-945E46C9A133}"
         "UpgradeCode" = "8:{59802AAF-3F0D-4077-B709-B1C3E61AF01F}"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
@@ -172,8 +198,8 @@
         "Keywords" = "8:"
         "ARPCOMMENTS" = "8:"
         "ARPURLINFOABOUT" = "8:"
-        "ARPPRODUCTICON" = "8:"
-        "ARPIconIndex" = "3:0"
+        "ARPPRODUCTICON" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
+        "ARPIconIndex" = "3:128"
         "SearchPath" = "8:"
         "UseSystemSearchPath" = "11:TRUE"
         }
@@ -277,12 +303,12 @@
             "Arguments" = "8:"
             "Description" = "8:"
             "ShowCmd" = "3:1"
-            "IconIndex" = "3:0"
+            "IconIndex" = "3:128"
             "Transitive" = "11:FALSE"
             "Target" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
             "Folder" = "8:_A383DF31C92D4E6DBE2590AE0378887A"
             "WorkingFolder" = "8:_4D9029858F624EB690B8C260D9B2EB6A"
-            "Icon" = "8:"
+            "Icon" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
             "Feature" = "8:"
             }
         }
@@ -668,6 +694,20 @@
         }
         "MergeModule"
         {
+            "{35A69C6E-5BA4-440D-803D-762B59A45393}:_075B1D953207458DA986D9A8C876EAC2"
+            {
+            "UseDynamicProperties" = "11:TRUE"
+            "IsDependency" = "11:TRUE"
+            "SourcePath" = "8:vc_user_atl71_rtl_x86_---.msm"
+                "Properties"
+                {
+                }
+            "LanguageId" = "3:0"
+            "Exclude" = "11:FALSE"
+            "Folder" = "8:"
+            "Feature" = "8:"
+            "IsolateTo" = "8:"
+            }
             "{35A69C6E-5BA4-440D-803D-762B59A45393}:_19570AE8CCBA41699EA18957703662DE"
             {
             "UseDynamicProperties" = "11:TRUE"
@@ -705,20 +745,6 @@
                 {
                 }
             "LanguageId" = "3:1033"
-            "Exclude" = "11:FALSE"
-            "Folder" = "8:"
-            "Feature" = "8:"
-            "IsolateTo" = "8:"
-            }
-            "{35A69C6E-5BA4-440D-803D-762B59A45393}:_FB3F2621F12E4CF99BFBC213CF7D41BB"
-            {
-            "UseDynamicProperties" = "11:TRUE"
-            "IsDependency" = "11:TRUE"
-            "SourcePath" = "8:vc_user_atl71_rtl_x86_---.msm"
-                "Properties"
-                {
-                }
-            "LanguageId" = "3:0"
             "Exclude" = "11:FALSE"
             "Folder" = "8:"
             "Feature" = "8:"

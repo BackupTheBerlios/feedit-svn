@@ -65,6 +65,7 @@ BEGIN
     BUTTON      ID_ACTIONS_UPDATEFEEDS
     SEPARATOR
     BUTTON      ID_ACTIONS_SENDMAIL
+    BUTTON      ID_ACTIONS_OPENINBROWSER
     BUTTON      ID_ACTIONS_TOGGLEUNREAD
     BUTTON      ID_ACTIONS_TOGGLEFLAGGED
     SEPARATOR
@@ -104,6 +105,7 @@ BEGIN
     POPUP "&Actions"
     BEGIN
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
+        MENUITEM "&Open item in browser...\tCtrl+O", 32826
         MENUITEM "Toggle &unread",              32818
         MENUITEM "Toggle &flagged",             ID_ACTIONS_TOGGLEFLAGGED
         MENUITEM SEPARATOR
@@ -154,6 +156,8 @@ BEGIN
     POPUP ""
     BEGIN
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
+        MENUITEM "&Open item in browser...\tCtrl+O", 
+                                                ID_ACTIONS_OPENINBROWSER
         MENUITEM "Toggle &unread",              ID_ACTIONS_TOGGLEUNREAD
         MENUITEM "Toggle &flagged",             32817
     END
@@ -308,6 +312,7 @@ BEGIN
     VK_TAB,         ID_NEXT_PANE,           VIRTKEY, NOINVERT
     VK_TAB,         ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
     "P",            ID_VIEW_PROPERTIES,     VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_ACTIONS_OPENINBROWSER, VIRTKEY, CONTROL, NOINVERT
 END
 
 
@@ -317,8 +322,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION 1,0,1,1
+ PRODUCTVERSION 1,0,1,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -331,15 +336,15 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904B0"
+        BLOCK "040904b0"
         BEGIN
             VALUE "FileDescription", "FeedIt Module"
-            VALUE "FileVersion", "1, 0, 0, 1"
+            VALUE "FileVersion", "1, 0, 1, 1"
             VALUE "InternalName", "FeedIt"
             VALUE "LegalCopyright", "Copyright 2004"
             VALUE "OriginalFilename", "FeedIt.exe"
             VALUE "ProductName", "FeedIt Module"
-            VALUE "ProductVersion", "1, 0, 0, 1"
+            VALUE "ProductVersion", "1, 0, 1, 1"
         END
     END
     BLOCK "VarFileInfo"
@@ -473,6 +478,7 @@ STRINGTABLE
 BEGIN
     ID_ACTIONS_TOGGLEFLAGGED "Toggle flagged message status\nToggle flagged"
     ID_ACTIONS_TOGGLEUNREAD "Toggle unread message status\nToggle unread"
+    ID_ACTIONS_OPENINBROWSER "Open item in browser\nOpen in browser"
 END
 
 #endif    // English (U.S.) resources

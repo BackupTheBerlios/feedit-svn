@@ -95,7 +95,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	ATLASSERT(SUCCEEDED(hRes));
 
 	COleDateTime now = COleDateTime::GetCurrentTime();
-	COleDateTime limit(2004, 10, 1, 0, 0, 0);
+	COleDateTime limit(2005, 1, 1, 0, 0, 0);
 
 	if(now >= limit)
 	{

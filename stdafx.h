@@ -26,3 +26,7 @@ extern CAppModule _Module;
 #include <atlctrlx.h>
 #include <atlmisc.h>
 #include <exdispid.h>
+
+#import "C:\WINDOWS\System32\SHDOCVW.dll" named_guids
+#import "C:\Program Files\Common Files\System\ADO\MSADO15.DLL" rename("EOF","EndOfFile")
+#import "C:\Program Files\Common Files\System\ADO\MSADOX.DLL"

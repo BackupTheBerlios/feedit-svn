@@ -4,6 +4,9 @@ class TreeData
 {
 public:
 	virtual ATL::CString ToString() = 0;
+
+	int m_id;
+	ATL::CString m_name;
 };
 
 class FolderData : public TreeData
@@ -13,8 +16,6 @@ public:
 	{
 		return "Folder";
 	}
-
-	ATL::CString m_name;
 };
 
 class FeedData : public TreeData
@@ -25,6 +26,5 @@ public:
 		return "Feed";
 	}
 
-	ATL::CString m_name;
 	ATL::CString m_url;
 };

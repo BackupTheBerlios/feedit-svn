@@ -4,7 +4,7 @@
 
 #pragma once
 
-#import "shdocvw.dll" named_guids
+#define DBPATH "E:\\FeedIt.mdb"
 
 class CMainFrame : public CFrameWindowImpl<CMainFrame>,
 	public CUpdateUI<CMainFrame>,
@@ -25,6 +25,7 @@ public:
 	CListViewCtrl m_listView;
 	CAxWindow m_htmlView;
 	CComPtr<IWebBrowser2> m_htmlCtrl;
+	CComPtr<ADODB::_Connection> m_connection;
 	CImageList m_dragImage;
 	int m_downloads;
 	BOOL m_dragging;
@@ -37,6 +38,17 @@ public:
 	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_feedsRoot(NULL), m_itemDrag(NULL), m_itemDrop(NULL),
 		m_arrowCursor(LoadCursor(NULL, IDC_ARROW)), m_noCursor(LoadCursor(NULL, IDC_NO))
 	{
+		if(::GetFileAttributes(DBPATH) == INVALID_FILE_ATTRIBUTES)
+		{
+			CComPtr<ADOX::_Catalog> catalog;
+			catalog.CoCreateInstance(CComBSTR("ADOX.Catalog"));
+			catalog->Create(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH));
+			CComPtr<ADODB::_Connection> connection;
+			connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
+			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH), _bstr_t(), _bstr_t(), 0);
+			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL)"), NULL, 0);
+		}
 	}
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
@@ -206,6 +218,69 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 
 		m_feedsRoot = m_treeView.InsertItem(_T("Feeds"), TVI_ROOT, TVI_LAST);
 		m_treeView.SetItemImage(m_feedsRoot, 1, 1);
+
+		m_connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
+		m_connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH), _bstr_t(), _bstr_t(), 0);
+		CComPtr<ADODB::_Command> command;
+		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		command->ActiveConnection = m_connection;
+		command->CommandText = "SELECT * FROM Folders";
+		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+		recordset->MoveFirst();
+
+		while(!recordset->EndOfFile)
+		{
+			FolderData* folderitemdata = new FolderData();
+			folderitemdata->m_id = recordset->Fields->GetItem("ID")->Value;
+			folderitemdata->m_name = recordset->Fields->GetItem("Name")->Value;
+			HTREEITEM folderitem = m_treeView.InsertItem(folderitemdata->m_name, m_feedsRoot, TVI_LAST);
+			m_treeView.SetItemImage(folderitem, 1, 1);
+			m_treeView.SetItemData(folderitem, (DWORD_PTR)folderitemdata);
+			CComPtr<ADODB::_Command> subcommand;
+			subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+			subcommand->ActiveConnection = m_connection;
+			subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=?";
+			subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderitemdata->m_id)));
+			CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+			subrecordset->MoveFirst();
+
+			while(!subrecordset->EndOfFile)
+			{
+				FeedData* feeditemdata = new FeedData();
+				feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
+				feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
+				feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
+				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, folderitem, TVI_LAST);
+				m_treeView.SetItemImage(feeditem, 0, 0);
+				m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
+				subrecordset->MoveNext();
+			}
+
+			recordset->MoveNext();
+		}
+
+		CComPtr<ADODB::_Command> subcommand;
+		subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+		subcommand->ActiveConnection = m_connection;
+		subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=0";
+		CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+		subrecordset->MoveFirst();
+
+		while(!subrecordset->EndOfFile)
+		{
+			int id = subrecordset->Fields->GetItem("ID")->Value;
+			FeedData* feeditemdata = new FeedData();
+			feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
+			feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
+			feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
+			HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, m_feedsRoot, TVI_LAST);
+			m_treeView.SetItemImage(feeditem, 0, 0);
+			m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
+			subrecordset->MoveNext();
+		}
+
+		m_treeView.Expand(m_feedsRoot);
+		m_treeView.SortChildren(m_feedsRoot, TRUE);
 
 		m_listView.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT);
 		m_listView.AddColumn("Date", 0);

@@ -49,6 +49,13 @@ public:
 
 	virtual BOOL OnIdle()
 	{
+		HTREEITEM i = m_treeView.GetSelectedItem();
+
+		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
+			UISetState(ID_FILE_DELETE, UPDUI_ENABLED);
+		else
+			UISetState(ID_FILE_DELETE, UPDUI_DISABLED);
+
 		UIUpdateToolBar();
 		return FALSE;
 	}
@@ -56,6 +63,7 @@ public:
 	BEGIN_UPDATE_UI_MAP(CMainFrame)
 		UPDATE_ELEMENT(ID_VIEW_TOOLBAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_VIEW_STATUS_BAR, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 	END_UPDATE_UI_MAP()
 
 	BEGIN_MSG_MAP(CMainFrame)
@@ -65,8 +73,9 @@ public:
 		MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonUp)
 		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINDRAG, OnBeginDrag)
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
-		COMMAND_ID_HANDLER(ID_FILE_NEW, OnFileNew)
-		COMMAND_ID_HANDLER(ID_FILE_OPEN, OnFileOpen)
+		COMMAND_ID_HANDLER(ID_FILE_NEW_FEED, OnFileNewFeed)
+		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
+		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
@@ -169,7 +178,7 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT, WS_EX_CLIENTEDGE);
 		m_treeView.SetDlgCtrlID(IDC_TREE);
 		CImageList il;
-		il.Create(IDB_TREE_IMAGELIST, 16, 2, RGB(255, 0 ,255));
+		il.Create(IDB_TREE_IMAGELIST, 16, 2, RGB(192, 192, 192));
 		m_treeView.SetImageList(il, TVSIL_NORMAL);
 		m_vSplit.SetSplitterPane(0, m_treeView);
 
@@ -196,6 +205,7 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		m_hSplit.SetSplitterPos(150); // from top
 
 		m_feedsRoot = m_treeView.InsertItem(_T("Feeds"), TVI_ROOT, TVI_LAST);
+		m_treeView.SetItemImage(m_feedsRoot, 1, 1);
 
 		m_listView.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT);
 		m_listView.AddColumn("Date", 0);
@@ -353,7 +363,7 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		return 0;
 	}
 
-	LRESULT OnFileNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	LRESULT OnFileNewFeed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		CStringDlg dlg(_T("Enter feed URL:"));
 		dlg.m_value = _T("http://");
@@ -364,15 +374,16 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 			itemdata->m_name = dlg.m_value;
 			itemdata->m_url = dlg.m_value;
 			HTREEITEM item = m_treeView.InsertItem(dlg.m_value, m_feedsRoot, TVI_LAST);
-			m_treeView.SetItemImage(item, 1, 1);
+			m_treeView.SetItemImage(item, 0, 0);
 			m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
 			m_treeView.SortChildren(m_feedsRoot, TRUE);
+			m_treeView.Expand(m_feedsRoot);
 		}
 
 		return 0;
 	}
 
-	LRESULT OnFileOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	LRESULT OnFileNewFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		CStringDlg dlg(_T("Enter folder name:"));
 		dlg.m_value = _T("New");
@@ -382,9 +393,23 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 			FolderData* itemdata = new FolderData();
 			itemdata->m_name = dlg.m_value;
 			HTREEITEM item = m_treeView.InsertItem(dlg.m_value, m_feedsRoot, TVI_LAST);
-			m_treeView.SetItemImage(item, 0, 0);
+			m_treeView.SetItemImage(item, 1, 1);
 			m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
 			m_treeView.SortChildren(m_feedsRoot, TRUE);
+			m_treeView.Expand(m_feedsRoot);
+		}
+
+		return 0;
+	}
+
+	LRESULT OnFileDelete(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		HTREEITEM i = m_treeView.GetSelectedItem();
+
+		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
+		{
+			delete (TreeData*)m_treeView.GetItemData(i);
+			m_treeView.DeleteItem(i);
 		}
 
 		return 0;

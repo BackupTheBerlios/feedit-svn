@@ -195,5 +195,8 @@
 		</Filter>
 	</Files>
 	<Globals>
+		<Global
+			Name="RESOURCE_FILE"
+			Value="FeedIt.rc"/>
 	</Globals>
 </VisualStudioProject>

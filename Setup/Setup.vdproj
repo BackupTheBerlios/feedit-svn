@@ -15,14 +15,14 @@
     {
         "Entry"
         {
-        "MsmKey" = "8:_19570AE8CCBA41699EA18957703662DE"
-        "OwnerKey" = "8:_UNDEFINED"
+        "MsmKey" = "8:_14AEAF26D8294742AACFF9B593D5705F"
+        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_337A1FD1F6E74155AC353EDBA9E149A7"
-        "OwnerKey" = "8:_EDEE28DA59EC4A19BB63EB1D078C036C"
+        "MsmKey" = "8:_19570AE8CCBA41699EA18957703662DE"
+        "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -196,6 +196,13 @@
         }
         "LaunchCondition"
         {
+            "{E4DE4623-56CB-424E-96A0-1AD21D5ECA20}:_B7371D220CB8436289B9BB6D237D5313"
+            {
+            "Name" = "8:WindowsVersion"
+            "Condition" = "8:VersionNT>=500"
+            "Message" = "8:This program requires Windows 2000/XP to work properly."
+            "InstallUrl" = "8:"
+            }
         }
         "Locator"
         {
@@ -209,7 +216,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:FeedIt"
         "ProductCode" = "8:{1C977BBD-CFBF-42C5-9718-DE6E8EBFA3BF}"
-        "PackageCode" = "8:{21FC54C5-8047-499A-B7CB-FCDA9DB712D8}"
+        "PackageCode" = "8:{2AD0B23B-82C9-41D0-B183-FB753168B9BE}"
         "UpgradeCode" = "8:{59802AAF-3F0D-4077-B709-B1C3E61AF01F}"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
@@ -720,6 +727,20 @@
         }
         "MergeModule"
         {
+            "{35A69C6E-5BA4-440D-803D-762B59A45393}:_14AEAF26D8294742AACFF9B593D5705F"
+            {
+            "UseDynamicProperties" = "11:TRUE"
+            "IsDependency" = "11:TRUE"
+            "SourcePath" = "8:vc_user_atl71_rtl_x86_---.msm"
+                "Properties"
+                {
+                }
+            "LanguageId" = "3:0"
+            "Exclude" = "11:FALSE"
+            "Folder" = "8:"
+            "Feature" = "8:"
+            "IsolateTo" = "8:"
+            }
             "{35A69C6E-5BA4-440D-803D-762B59A45393}:_19570AE8CCBA41699EA18957703662DE"
             {
             "UseDynamicProperties" = "11:TRUE"
@@ -729,20 +750,6 @@
                 {
                 }
             "LanguageId" = "3:1033"
-            "Exclude" = "11:FALSE"
-            "Folder" = "8:"
-            "Feature" = "8:"
-            "IsolateTo" = "8:"
-            }
-            "{35A69C6E-5BA4-440D-803D-762B59A45393}:_337A1FD1F6E74155AC353EDBA9E149A7"
-            {
-            "UseDynamicProperties" = "11:TRUE"
-            "IsDependency" = "11:TRUE"
-            "SourcePath" = "8:vc_user_atl71_rtl_x86_---.msm"
-                "Properties"
-                {
-                }
-            "LanguageId" = "3:0"
             "Exclude" = "11:FALSE"
             "Folder" = "8:"
             "Feature" = "8:"
@@ -781,7 +788,7 @@
         {
             "{8062640A-2EEE-46E9-AB67-688E9A886E9F}:_EDEE28DA59EC4A19BB63EB1D078C036C"
             {
-            "SourcePath" = "8:..\\debug\\FeedIt.exe"
+            "SourcePath" = "8:..\\Debug\\FeedIt.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_4D9029858F624EB690B8C260D9B2EB6A"

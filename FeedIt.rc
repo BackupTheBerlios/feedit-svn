@@ -93,6 +93,9 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "&Delete\tDel",                ID_FILE_DELETE
         MENUITEM SEPARATOR
+        MENUITEM "&Export OPML file...",        32814
+        MENUITEM "&Import OPML file...",        ID_FILE_IMPORT_OPML
+        MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_APP_EXIT
     END
     POPUP "&Actions"
@@ -466,6 +469,8 @@ BEGIN
     ID_VIEW_OPTIONS         "Edit program options\nOptions"
     ID_ACTIONS_UPDATEFEEDS  "Update all feeds\nUpdate feeds"
     ID_VIEW_CUSTOMIZETOOLBAR "Customize toolbar buttons\nCustomize toolbar"
+    ID_FILE_EXPORT_OPML     "Export OPML file\nExport OPML"
+    ID_FILE_IMPORT_OPML     "Import OPML file\nImport OPML"
 END
 
 #endif    // English (U.S.) resources

@@ -41,8 +41,14 @@ public:
 		{
 			NMTVCUSTOMDRAW* pTVCD = reinterpret_cast<NMTVCUSTOMDRAW*>(lpNMCustomDraw);
 			FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)GetItemData((HTREEITEM)pTVCD->nmcd.dwItemSpec));
+
 			if(feeddata != NULL && feeddata->m_unread > 0)
-				::SelectObject(pTVCD->nmcd.hdc, AtlCreateBoldFont());
+			{
+				HFONT boldfont = AtlCreateBoldFont();
+				::SelectObject(pTVCD->nmcd.hdc, boldfont);
+				::DeleteObject(boldfont);
+			}
+
 			return CDRF_NEWFONT | CDRF_NOTIFYPOSTPAINT;
 		}
 		else

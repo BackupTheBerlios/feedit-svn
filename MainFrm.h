@@ -96,6 +96,9 @@ public:
 			if(i != NULL)
 			{
 				feeddata->m_unread = GetUnreadItemCount(feeddata->m_id);
+				CAtlString txt;
+				m_treeView.GetItemText(i, txt);
+				m_treeView.SetItemText(i, txt);
 			}
 			else
 			{
@@ -111,6 +114,84 @@ public:
 		}
 	}
 
+	void RefreshList()
+	{
+		HTREEITEM i = m_treeView.GetSelectedItem();
+
+		if(i != NULL)
+		{
+			FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+
+			if(feeddata != NULL)
+			{
+				CAtlMap<int, bool> entrymap;
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				command->ActiveConnection = m_connection;
+				command->CommandText = "SELECT * FROM News WHERE FeedID=? ORDER BY Issued";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+				if(!recordset->EndOfFile)
+				{
+					recordset->MoveFirst();
+
+					while(!recordset->EndOfFile)
+					{
+						entrymap[(int)recordset->Fields->GetItem("ID")->Value] = true;
+						recordset->MoveNext();
+					}
+				}
+
+				for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
+				{
+					NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+					if(!entrymap.Lookup(newsdata->m_id))
+					{
+						m_listView.DeleteItem(idx--);
+						delete newsdata;
+					}
+					else
+					{
+						entrymap.RemoveKey(newsdata->m_id);
+					}
+				}
+
+				if(!recordset->BOF)
+				{
+					recordset->MoveFirst();
+
+					while(!recordset->EndOfFile)
+					{
+						if(entrymap.Lookup((int)recordset->Fields->GetItem("ID")->Value))
+						{
+							NewsData* newsdata = new NewsData();
+							newsdata->m_id = recordset->Fields->GetItem("ID")->Value;
+							newsdata->m_url = recordset->Fields->GetItem("URL")->Value;
+
+							if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
+							{
+								m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 1);
+								newsdata->m_unread = true;
+							}
+							else
+							{
+								m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 0);
+								newsdata->m_unread = false;
+							}
+
+							m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
+							m_listView.SetItemData(0, (DWORD_PTR)newsdata);
+						}
+
+						recordset->MoveNext();
+					}
+				}
+			}
+		}
+	}
+
 	virtual BOOL OnIdle()
 	{
 		if(m_mustRefresh)
@@ -121,6 +202,7 @@ public:
 				str.Format("There are %d new items", m_newItems);
 				Notify(str, "FeedIt update");
 				RefreshTree();
+				RefreshList();
 				m_newItems = 0;
 			}
 
@@ -137,6 +219,11 @@ public:
 		else
 			UISetState(ID_FILE_DELETE, UPDUI_DISABLED);
 
+		if(i != NULL && dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
+			UISetState(ID_ACTIONS_MARKREAD, UPDUI_ENABLED);
+		else
+			UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
+
 		UIUpdateToolBar();
 		return FALSE;
 	}
@@ -145,6 +232,7 @@ public:
 		UPDATE_ELEMENT(ID_VIEW_TOOLBAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_VIEW_STATUS_BAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_ACTIONS_MARKREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 	END_UPDATE_UI_MAP()
 
 	BEGIN_MSG_MAP(CMainFrame)
@@ -326,10 +414,15 @@ public:
 		try
 		{
 			CAtlString t1((const char*)date);
-			CAtlString t2;
-			t2 += t1.Mid(0, 10);
-			t2 += " ";
-			t2 += t1.Mid(11, 8);
+			COleDateTime dt(atoi(t1.Mid(0, 4)), atoi(t1.Mid(5, 2)), atoi(t1.Mid(8, 2)), atoi(t1.Mid(11, 2)), atoi(t1.Mid(14, 2)), atoi(t1.Mid(17, 2)));
+
+			if(t1.Mid(19, 1) == "+")
+				dt -= COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
+
+			if(t1.Mid(19, 1) == "-")
+				dt += COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
+
+			CAtlString t2 = dt.Format("%Y/%m/%d %H:%M:%S");
 
 			CComPtr<ADODB::_Recordset> recordset;
 			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
@@ -508,6 +601,7 @@ public:
 		m_vSplit.SetSplitterPane(1, m_hSplit);
 
 		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE);
+		::SendMessage(m_treeView.m_hWnd, CCM_SETVERSION, 5, 0);
 		m_treeView.SetDlgCtrlID(IDC_TREE);
 		CImageList tvil;
 		tvil.Create(IDB_TREE_IMAGELIST, 16, 2, RGB(192, 192, 192));
@@ -515,6 +609,7 @@ public:
 		m_vSplit.SetSplitterPane(0, m_treeView);
 
 		m_listView.Create(m_hSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE);
+		::SendMessage(m_listView.m_hWnd, CCM_SETVERSION, 5, 0);
 		m_listView.SetDlgCtrlID(IDC_LIST);
 		CImageList lvil;
 		lvil.Create(IDB_LIST_IMAGELIST, 16, 2, RGB(192, 192, 192));
@@ -905,8 +1000,10 @@ public:
 				HTREEITEM i = m_treeView.GetSelectedItem();
 				FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 				feeddata->m_unread--;
+				CAtlString txt;
+				m_treeView.GetItemText(i, txt);
+				m_treeView.SetItemText(i, txt);
 				m_listView.Invalidate();
-				m_treeView.Invalidate();
 			}
 		}
 
@@ -1067,11 +1164,13 @@ public:
 				HTREEITEM i = m_treeView.GetSelectedItem();
 				FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 				feeddata->m_unread--;
+				CAtlString txt;
+				m_treeView.GetItemText(i, txt);
+				m_treeView.SetItemText(i, txt);
 			}
 		}
 
 		m_listView.Invalidate();
-		m_treeView.Invalidate();
 
 		return 0;
 	}

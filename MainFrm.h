@@ -116,23 +116,65 @@ public:
 		}
 	}
 
-	void RefreshList()
+	HTREEITEM GetFeedTreeItem(int feedid, HTREEITEM root = NULL)
 	{
-		HTREEITEM i = m_treeView.GetSelectedItem();
+		if(root == NULL)
+		{
+			root = m_feedsRoot;
+		}
 
-		if(i != NULL)
+		HTREEITEM i = m_treeView.GetChildItem(root);
+		HTREEITEM ret = NULL;
+
+		while(i != NULL && ret == NULL)
 		{
 			FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 
-			if(feeddata != NULL)
+			if(feeddata != NULL && feeddata->m_id == feedid)
+			{
+				ret = i;
+			}
+			else
+			{
+				ret = GetFeedTreeItem(feedid, i);
+			}
+
+			i = m_treeView.GetNextSiblingItem(i);
+		}
+
+		return ret;
+	}
+
+	void RefreshList()
+	{
+		HTREEITEM i = m_treeView.GetSelectedItem();
+		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
+
+		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
+		{
 			{
 				CAtlMap<int, bool> entrymap;
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
-				command->CommandText = "SELECT * FROM News WHERE FeedID=? ORDER BY Issued";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+
+				if(feeddata != NULL)
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+				}
+				else if(folderdata != NULL)
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
+				}
+				else
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued";
+				}
+
 				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 
 				if(!recordset->EndOfFile)
@@ -175,6 +217,8 @@ public:
 							newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
 							newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
 							newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
+							newsdata->m_feedTreeItem = GetFeedTreeItem(recordset->Fields->GetItem("Feeds.ID")->Value);
+							feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
 
 							if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
 							{
@@ -188,6 +232,7 @@ public:
 							}
 
 							m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
+							m_listView.AddItem(0, 2, feeddata->m_name);
 							m_listView.SetItemData(0, (DWORD_PTR)newsdata);
 						}
 
@@ -219,13 +264,21 @@ public:
 		}
 
 		HTREEITEM i = m_treeView.GetSelectedItem();
+		FeedData* feeddata = NULL;
+		FolderData* folderdata = NULL;
+
+		if(i != NULL)
+		{
+			feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+			folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
+		}
 
 		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
 			UISetState(ID_FILE_DELETE, UPDUI_ENABLED);
 		else
 			UISetState(ID_FILE_DELETE, UPDUI_DISABLED);
 
-		if(i != NULL && dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
+		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
 			UISetState(ID_ACTIONS_MARKREAD, UPDUI_ENABLED);
 		else
 			UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
@@ -739,8 +792,10 @@ public:
 		m_listView.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT);
 		m_listView.AddColumn("Date", 0);
 		m_listView.AddColumn("Title", 1);
+		m_listView.AddColumn("Feed", 2);
 		m_listView.SetColumnWidth(0, 150);
 		m_listView.SetColumnWidth(1, 500);
+		m_listView.SetColumnWidth(2, 150);
 
 		// register object for message filtering and idle updates
 		CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -960,44 +1015,64 @@ public:
 		_variant_t url("about:blank");
 		HTREEITEM i = m_treeView.GetSelectedItem();
 		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
 
-		if(feeddata != NULL)
+		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
 		{
-			CComPtr<ADODB::_Command> command;
-			command.CoCreateInstance(CComBSTR("ADODB.Command"));
-			ATLASSERT(command != NULL);
-			command->ActiveConnection = m_connection;
-			command->CommandText = "SELECT * FROM News WHERE FeedID=? ORDER BY Issued";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
-			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
-
-			if(!recordset->EndOfFile)
 			{
-				recordset->MoveFirst();
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
+				command->ActiveConnection = m_connection;
 
-				while(!recordset->EndOfFile)
+				if(feeddata != NULL)
 				{
-					NewsData* newsdata = new NewsData();
-					newsdata->m_id = recordset->Fields->GetItem("ID")->Value;
-					newsdata->m_url = recordset->Fields->GetItem("URL")->Value;
-					newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
-					newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
-					newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+				}
+				else if(folderdata != NULL)
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
+				}
+				else
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued";
+				}
 
-					if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
-					{
-						m_listView.InsertItem(0, newsdata->m_issued, 1);
-						newsdata->m_unread = true;
-					}
-					else
-					{
-						m_listView.InsertItem(0, newsdata->m_issued, 0);
-						newsdata->m_unread = false;
-					}
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 
-					m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
-					m_listView.SetItemData(0, (DWORD_PTR)newsdata);
-					recordset->MoveNext();
+				if(!recordset->EndOfFile)
+				{
+					recordset->MoveFirst();
+
+					while(!recordset->EndOfFile)
+					{
+						NewsData* newsdata = new NewsData();
+						newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
+						newsdata->m_url = recordset->Fields->GetItem("News.URL")->Value;
+						newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
+						newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
+						newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
+						newsdata->m_feedTreeItem = GetFeedTreeItem(recordset->Fields->GetItem("Feeds.ID")->Value);
+						feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
+
+						if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
+						{
+							m_listView.InsertItem(0, newsdata->m_issued, 1);
+							newsdata->m_unread = true;
+						}
+						else
+						{
+							m_listView.InsertItem(0, newsdata->m_issued, 0);
+							newsdata->m_unread = false;
+						}
+
+						m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
+						m_listView.AddItem(0, 2, feeddata->m_name);
+						m_listView.SetItemData(0, (DWORD_PTR)newsdata);
+						recordset->MoveNext();
+					}
 				}
 			}
 
@@ -1023,9 +1098,10 @@ public:
 				WriteLine(hFile, "<style type=\"text/css\">");
 				// WriteLine(hFile, "\thtml { border: 6px solid gray; }");
 				WriteLine(hFile, "\tbody { background-color: white; color: black; font: 84% Verdana, Arial, sans-serif; margin: 12px 22px; }");
+				WriteLine(hFile, "\ttable { font: 100% Verdana, Arial, sans-serif; }");
 				WriteLine(hFile, "\ta { color: #0002CA; }");
 				WriteLine(hFile, "\ta:hover { color: #6B8ADE; text-decoration: underline; }");
-				WriteLine(hFile, "\tspan.nodescription {	color: silver;	font-size: smaller; }");
+				WriteLine(hFile, "\tspan.nodescription { color: silver; font-size: smaller; }");
 				WriteLine(hFile, "");
 				WriteLine(hFile, "\th1,h2,h3,h4,h5,h6 { font-size: 80%; font-weight: bold; font-style: italic;	}");
 				WriteLine(hFile, "");
@@ -1043,7 +1119,7 @@ public:
 				WriteLine(hFile, "\tdiv.channeltitle { font-weight: bold; text-transform: uppercase; margin-top: 12px; margin-bottom: 18px;}");
 				WriteLine(hFile, "\timg.channel { border: none; }");
 				WriteLine(hFile, "");
-				WriteLine(hFile, "\tdiv.newsitemcontent { line-height: 140%; }");
+				WriteLine(hFile, "\tdiv.newsitemcontent { line-height: 140%; text-align: justify; }");
 				WriteLine(hFile, "\tdiv.newsitemcontent ol, div.newsitemcontent ul { list-style-position: inside;}");
 				WriteLine(hFile, "\tdiv.newsitemtitle { font-weight: bold; margin-bottom: 8px }");
 				WriteLine(hFile, "\tdiv.newsitemfooter { color: gray; font-size: xx-small; text-align: left; margin-top: 6px; margin-bottom: 18px; }");
@@ -1055,19 +1131,55 @@ public:
 				WriteLine(hFile, "</head>");
 				WriteLine(hFile, "<body>");
 
-				for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
-				{
-					NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
+				command->ActiveConnection = m_connection;
 
-					if(newsdata != NULL)
+				if(feeddata != NULL)
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued DESC";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+				}
+				else if(folderdata != NULL)
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued DESC";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
+				}
+				else
+				{
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued DESC";
+				}
+
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+				if(!recordset->EndOfFile)
+				{
+					recordset->MoveFirst();
+					int x = 0;
+
+					while(!recordset->EndOfFile)
 					{
+						if(x % 2 == 0)
+							WriteLine(hFile, "<table width=\"100%\"><tr><td width=\"90%\">");
+						else
+							WriteLine(hFile, "<table width=\"100%\"><tr><td width=\"10%\">&nbsp;</td><td width=\"75%\">");
+
 						CAtlString tmp;
-						tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>\n", (const char*)newsdata->m_url, (const char*)newsdata->m_title);
+						tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>\n", (const char*)(_bstr_t)recordset->Fields->GetItem("News.URL")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("Title")->Value);
 						WriteLine(hFile, tmp);
-						tmp.Format("\t<div class=\"newsitemcontent\">%s</div>\n", (const char*)newsdata->m_description);
+						tmp.Format("\t<div class=\"newsitemcontent\">%s</div>\n", (const char*)(_bstr_t)recordset->Fields->GetItem("Description")->Value);
 						WriteLine(hFile, tmp);
-						tmp.Format("\t<div class=\"newsitemfooter\">Received %s</div>", (const char*)newsdata->m_issued);
+						tmp.Format("\t<div class=\"newsitemfooter\">Received %s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("Issued")->Value);
 						WriteLine(hFile, tmp);
+
+						if(x % 2 == 0)
+							WriteLine(hFile, "</td><td width=\"10%\">&nbsp;</td></tr></table>");
+						else
+							WriteLine(hFile, "</td></tr></table>");
+
+						++x;
+						recordset->MoveNext();
 					}
 				}
 
@@ -1148,13 +1260,12 @@ public:
 
 	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
 	{
-		HTREEITEM i = m_treeView.GetSelectedItem();
-		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 		int idx = m_listView.GetSelectedIndex();
 		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
 
-		if(feeddata != NULL && newsdata != NULL)
+		if(newsdata != NULL)
 		{
+			FeedData* feeddata = dynamic_cast<FeedData*>((FeedData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
 			_variant_t url;
 
 			if(feeddata->m_navigateURL == 1 || (feeddata->m_navigateURL == 0 && strlen(newsdata->m_description) < 60))
@@ -1246,8 +1357,8 @@ public:
 				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
 				feeddata->m_unread--;
 				CAtlString txt;
-				m_treeView.GetItemText(i, txt);
-				m_treeView.SetItemText(i, txt);
+				m_treeView.GetItemText(newsdata->m_feedTreeItem, txt);
+				m_treeView.SetItemText(newsdata->m_feedTreeItem, txt);
 				m_listView.Invalidate();
 			}
 		}
@@ -1398,11 +1509,11 @@ public:
 	LRESULT OnActionsMarkRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		HTREEITEM i = m_treeView.GetSelectedItem();
+		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
 
-		if(i != NULL)
+		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
 		{
-			FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
-
 			for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
 			{
 				NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
@@ -1418,13 +1529,10 @@ public:
 					CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 					newsdata->m_unread = false;
 					m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
-					feeddata->m_unread--;
 				}
 			}
 
-			CAtlString txt;
-			m_treeView.GetItemText(i, txt);
-			m_treeView.SetItemText(i, txt);
+			RefreshTree();
 			m_listView.Invalidate();
 		}
 

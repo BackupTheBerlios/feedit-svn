@@ -51,4 +51,5 @@ public:
 	CAtlString m_title;
 	CAtlString m_description;
 	bool m_unread;
+	HTREEITEM m_feedTreeItem;
 };

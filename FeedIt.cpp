@@ -17,6 +17,7 @@
 #include "CustomListView.h"
 #include "TrayIcon.h"
 #include "Settings.h"
+#include "FeedProps.h"
 #include "MainFrm.h"
 
 CAppModule _Module;

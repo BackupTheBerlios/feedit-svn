@@ -59,6 +59,8 @@ BEGIN
     SEPARATOR
     BUTTON      ID_FILE_DELETE
     SEPARATOR
+    BUTTON      ID_VIEW_PROPERTIES
+    SEPARATOR
     BUTTON      ID_ACTIONS_MARKREAD
     SEPARATOR
     BUTTON      ID_ACTIONS_BACK
@@ -102,6 +104,8 @@ BEGIN
     BEGIN
         MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "&Properties...",              ID_VIEW_PROPERTIES
     END
     POPUP "&Help"
     BEGIN
@@ -158,6 +162,17 @@ BEGIN
     EDITTEXT        IDC_VALUE,7,21,172,12,ES_AUTOHSCROLL
 END
 
+IDD_FEED_PROPERTIES_PAGE DIALOGEX 0, 0, 210, 154
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Property Page"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Name:",IDC_STATIC,7,9,22,8
+    EDITTEXT        IDC_FEED_NAME,43,7,160,12,ES_AUTOHSCROLL
+    LTEXT           "URL:",IDC_STATIC,7,26,22,8
+    EDITTEXT        IDC_FEED_URL,43,24,160,12,ES_AUTOHSCROLL
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -181,6 +196,14 @@ BEGIN
         RIGHTMARGIN, 179
         TOPMARGIN, 7
         BOTTOMMARGIN, 60
+    END
+
+    IDD_FEED_PROPERTIES_PAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -341,6 +364,11 @@ BEGIN
     ID_FILE_DELETE          "Delete current item\nDelete"
     ID_SHOW                 "Show application window\nShow"
     ID_ACTIONS_MARKREAD     "Mark all items as read\nMark Read"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_PROPERTIES      "Edit item properties\nProperties"
 END
 
 #endif    // English (U.S.) resources

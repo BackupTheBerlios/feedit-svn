@@ -183,7 +183,7 @@ public:
 
 					while(!recordset->EndOfFile)
 					{
-						entrymap[(int)recordset->Fields->GetItem("ID")->Value] = true;
+						entrymap[(int)recordset->Fields->GetItem("News.ID")->Value] = true;
 						recordset->MoveNext();
 					}
 				}
@@ -209,11 +209,11 @@ public:
 
 					while(!recordset->EndOfFile)
 					{
-						if(entrymap.Lookup((int)recordset->Fields->GetItem("ID")->Value))
+						if(entrymap.Lookup((int)recordset->Fields->GetItem("News.ID")->Value))
 						{
 							NewsData* newsdata = new NewsData();
-							newsdata->m_id = recordset->Fields->GetItem("ID")->Value;
-							newsdata->m_url = recordset->Fields->GetItem("URL")->Value;
+							newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
+							newsdata->m_url = recordset->Fields->GetItem("News.URL")->Value;
 							newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
 							newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
 							newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
@@ -278,6 +278,11 @@ public:
 		else
 			UISetState(ID_FILE_DELETE, UPDUI_DISABLED);
 
+		if(feeddata != NULL)
+			UISetState(ID_VIEW_PROPERTIES, UPDUI_ENABLED);
+		else
+			UISetState(ID_VIEW_PROPERTIES, UPDUI_DISABLED);
+
 		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
 			UISetState(ID_ACTIONS_MARKREAD, UPDUI_ENABLED);
 		else
@@ -291,6 +296,7 @@ public:
 		UPDATE_ELEMENT(ID_VIEW_TOOLBAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_VIEW_STATUS_BAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_VIEW_PROPERTIES, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_MARKREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_BACK, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_FORWARD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
@@ -312,6 +318,7 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FEED, OnFileNewFeed)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
+		COMMAND_ID_HANDLER(ID_VIEW_PROPERTIES, OnViewProperties)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
 		COMMAND_ID_HANDLER(ID_ACTIONS_BACK, OnActionsBack)
 		COMMAND_ID_HANDLER(ID_ACTIONS_FORWARD, OnActionsForward)
@@ -672,7 +679,7 @@ public:
 		// add the horizontal splitter to the right pane (1) of vertical splitter
 		m_vSplit.SetSplitterPane(1, m_hSplit);
 
-		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_EDITLABELS, WS_EX_CLIENTEDGE);
+		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_EDITLABELS, WS_EX_CLIENTEDGE);
 		::SendMessage(m_treeView.m_hWnd, CCM_SETVERSION, 5, 0);
 		m_treeView.SetDlgCtrlID(IDC_TREE);
 		CImageList tvil;
@@ -829,6 +836,7 @@ public:
 		liDueTime.QuadPart = -10000;
 		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
 
+		m_treeView.SelectItem(m_feedsRoot);
 		return 0;
 	}
 
@@ -1246,6 +1254,8 @@ public:
 				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 				return TRUE;
 			}
+
+			m_treeView.SortChildren(m_feedsRoot, TRUE);
 		}
 
 		return FALSE;
@@ -1501,6 +1511,49 @@ public:
 
 			delete (TreeData*)m_treeView.GetItemData(i);
 			m_treeView.DeleteItem(i);
+		}
+
+		return 0;
+	}
+
+	LRESULT OnViewProperties(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		HTREEITEM i = m_treeView.GetSelectedItem();
+		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+
+		if(feeddata != NULL)
+		{
+			CComPtr<ADODB::_Command> command;
+			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ATLASSERT(command != NULL);
+			command->ActiveConnection = m_connection;
+			command->CommandText = "SELECT * FROM Feeds WHERE ID=?";
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+			if(!recordset->EndOfFile)
+			{
+				recordset->MoveFirst();
+				CFeedPropertySheet sheet("Feed properties", 0);
+				sheet.m_propertiesPage.m_name = recordset->Fields->GetItem("Name")->Value;
+				sheet.m_propertiesPage.m_url = recordset->Fields->GetItem("URL")->Value;
+
+				if(sheet.DoModal() == IDOK)
+				{
+					CComPtr<ADODB::_Command> subcommand;
+					subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ATLASSERT(subcommand != NULL);
+					subcommand->ActiveConnection = m_connection;
+					subcommand->CommandText = "UPDATE Feeds SET Name=?, URL=? WHERE ID=?";
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_name)));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_url)));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+					CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+					feeddata->m_name = sheet.m_propertiesPage.m_name;
+					m_treeView.SetItemText(i, feeddata->m_name);
+					m_treeView.SortChildren(m_feedsRoot, TRUE);
+				}
+			}
 		}
 
 		return 0;

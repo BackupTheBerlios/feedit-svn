@@ -168,6 +168,9 @@
 				RelativePath=".\DataStructs.h">
 			</File>
 			<File
+				RelativePath=".\FeedProps.h">
+			</File>
+			<File
 				RelativePath=".\MainFrm.h">
 			</File>
 			<File

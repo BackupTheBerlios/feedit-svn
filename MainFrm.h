@@ -248,6 +248,8 @@ public:
 		MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonUp)
 		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINDRAG, OnBeginDrag)
 		NOTIFY_HANDLER(IDC_TREE, TVN_SELCHANGED, OnTreeSelectionChanged)
+		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINLABELEDIT, OnTreeBeginLabelEdit)
+		NOTIFY_HANDLER(IDC_TREE, TVN_ENDLABELEDIT, OnTreeEndLabelEdit)
 		NOTIFY_HANDLER(IDC_LIST, LVN_ITEMCHANGED, OnListSelectionChanged)
 		COMMAND_ID_HANDLER(ID_SHOW, OnShow)
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
@@ -614,7 +616,7 @@ public:
 		// add the horizontal splitter to the right pane (1) of vertical splitter
 		m_vSplit.SetSplitterPane(1, m_hSplit);
 
-		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE);
+		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_EDITLABELS, WS_EX_CLIENTEDGE);
 		::SendMessage(m_treeView.m_hWnd, CCM_SETVERSION, 5, 0);
 		m_treeView.SetDlgCtrlID(IDC_TREE);
 		CImageList tvil;
@@ -994,6 +996,62 @@ public:
 		}
 
 		return 0;
+	}
+
+	LRESULT OnTreeBeginLabelEdit(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+	{
+		NMTVDISPINFO* pTVDI = reinterpret_cast<NMTVDISPINFO*>(pnmh);
+		TreeData* treedata = (TreeData*)m_treeView.GetItemData(pTVDI->item.hItem);
+		bool isFeed = (dynamic_cast<FeedData*>(treedata) != NULL);
+		bool isFolder = (dynamic_cast<FolderData*>(treedata) != NULL);
+
+		if(isFolder || isFeed)
+			return FALSE;
+		else
+			return TRUE;
+	}
+
+	LRESULT OnTreeEndLabelEdit(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+	{
+		NMTVDISPINFO* pTVDI = reinterpret_cast<NMTVDISPINFO*>(pnmh);
+
+		if(pTVDI->item.pszText != NULL)
+		{
+			TreeData* treedata = (TreeData*)m_treeView.GetItemData(pTVDI->item.hItem);
+			bool isFeed = (dynamic_cast<FeedData*>(treedata) != NULL);
+			bool isFolder = (dynamic_cast<FolderData*>(treedata) != NULL);
+
+			if(isFeed)
+			{
+				FeedData* feeddata = dynamic_cast<FeedData*>(treedata);
+				feeddata->m_name = pTVDI->item.pszText;
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
+				command->ActiveConnection = m_connection;
+				command->CommandText = "UPDATE Feeds SET Name=? WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(feeddata->m_name)));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				return TRUE;
+			}
+			else if(isFolder)
+			{
+				FolderData* folderdata = dynamic_cast<FolderData*>(treedata);
+				folderdata->m_name = pTVDI->item.pszText;
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				ATLASSERT(command != NULL);
+				command->ActiveConnection = m_connection;
+				command->CommandText = "UPDATE Folders SET Name=? WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(folderdata->m_name)));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderdata->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				return TRUE;
+			}
+		}
+
+		return FALSE;
 	}
 
 	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)

@@ -31,6 +31,7 @@
 #define IDC_OPTIONS_RETAIN              1014
 #define IDC_SEARCHTEXT                  1015
 #define IDC_SEARCH                      1016
+#define IDC_ABOUTTEXT                   1017
 #define ID_FILE_NEW_FEED                32772
 #define ID_FILE_NEW_FOLDER              32773
 #define ID_FILE_DELETE                  32774
@@ -45,14 +46,15 @@
 #define ID_ACTIONS_MARKFLAGGED          32806
 #define ID_ACTIONS_MARKUNFLAGGED        32808
 #define ID_VIEW_OPTIONS                 32809
+#define ID_ACTIONS_UPDATEFEEDS          32810
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        212
-#define _APS_NEXT_COMMAND_VALUE         32810
-#define _APS_NEXT_CONTROL_VALUE         1017
+#define _APS_NEXT_COMMAND_VALUE         32812
+#define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -36,6 +36,7 @@ public:
 	int m_downloads;
 	BOOL m_dragging;
 	BOOL m_mustRefresh;
+	BOOL m_forceUpdate;
 	int m_newItems;
 	HTREEITEM m_feedsRoot;
 	HTREEITEM m_searchRoot;
@@ -46,7 +47,7 @@ public:
 	CWorkerThread<> m_updateThread;
 	HANDLE m_hTimer;
 
-	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_mustRefresh(FALSE), m_newItems(0),
+	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_mustRefresh(FALSE), m_forceUpdate(FALSE), m_newItems(0),
 		m_feedsRoot(NULL), m_searchRoot(NULL), m_itemDrag(NULL), m_itemDrop(NULL), m_arrowCursor(LoadCursor(NULL, IDC_ARROW)),
 		m_noCursor(LoadCursor(NULL, IDC_NO))
 	{
@@ -301,6 +302,7 @@ public:
 			}
 
 			m_mustRefresh = FALSE;
+			m_forceUpdate = FALSE;
 			LARGE_INTEGER liDueTime;
 			liDueTime.QuadPart = -10000 * (__int64) REFRESH_INTERVAL;
 			::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
@@ -413,6 +415,7 @@ public:
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKFLAGGED, OnActionsMarkFlagged)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKUNFLAGGED, OnActionsMarkUnflagged)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKALLREAD, OnActionsMarkAllRead)
+		COMMAND_ID_HANDLER(ID_ACTIONS_UPDATEFEEDS, OnActionsUpdateFeeds)
 		COMMAND_ID_HANDLER(ID_ACTIONS_BACK, OnActionsBack)
 		COMMAND_ID_HANDLER(ID_ACTIONS_FORWARD, OnActionsForward)
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
@@ -478,7 +481,7 @@ public:
 				{
 					COleDateTimeSpan s1(0, 0, refresh, 0);
 
-					if(t1+s1 < now)
+					if(m_forceUpdate || t1+s1 < now)
 					{
 						int feedid = recordset->Fields->GetItem("ID")->Value;
 						_bstr_t url = recordset->Fields->GetItem("URL")->Value;
@@ -1297,7 +1300,6 @@ public:
 				WriteLine(hFile, "<META http-equiv=\"Content-Type\" content=\"text/html\">");
 				WriteLine(hFile, "<title>FeedIt</title>");
 				WriteLine(hFile, "<style type=\"text/css\">");
-				WriteLine(hFile, "\thtml { border: 4px solid gray; }");
 				WriteLine(hFile, "\tbody { background-color: white; color: black; font: 84% Verdana, Arial, sans-serif; margin: 12px 22px; }");
 				WriteLine(hFile, "\ttable { font: 100% Verdana, Arial, sans-serif; }");
 				WriteLine(hFile, "\ta { color: #0002CA; }");
@@ -1527,7 +1529,6 @@ public:
 					WriteLine(hFile, "<META http-equiv=\"Content-Type\" content=\"text/html\">");
 					WriteLine(hFile, "<title>FeedIt</title>");
 					WriteLine(hFile, "<style type=\"text/css\">");
-					WriteLine(hFile, "\thtml { border: 4px solid gray; }");
 					WriteLine(hFile, "\tbody { background-color: white; color: black; font: 84% Verdana, Arial, sans-serif; margin: 12px 22px; }");
 					WriteLine(hFile, "\ttable { font: 100% Verdana, Arial, sans-serif; }");
 					WriteLine(hFile, "\ta { color: #0002CA; }");
@@ -2023,6 +2024,15 @@ public:
 			m_listView.Invalidate();
 		}
 
+		return 0;
+	}
+
+	LRESULT OnActionsUpdateFeeds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		m_forceUpdate = TRUE;
+		LARGE_INTEGER liDueTime;
+		liDueTime.QuadPart = -10000;
+		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
 		return 0;
 	}
 

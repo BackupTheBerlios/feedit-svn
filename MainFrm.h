@@ -226,37 +226,46 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Folders";
 		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
-		recordset->MoveFirst();
 
-		while(!recordset->EndOfFile)
+		if(!recordset->EndOfFile)
 		{
-			FolderData* folderitemdata = new FolderData();
-			folderitemdata->m_id = recordset->Fields->GetItem("ID")->Value;
-			folderitemdata->m_name = recordset->Fields->GetItem("Name")->Value;
-			HTREEITEM folderitem = m_treeView.InsertItem(folderitemdata->m_name, m_feedsRoot, TVI_LAST);
-			m_treeView.SetItemImage(folderitem, 1, 1);
-			m_treeView.SetItemData(folderitem, (DWORD_PTR)folderitemdata);
-			CComPtr<ADODB::_Command> subcommand;
-			subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
-			subcommand->ActiveConnection = m_connection;
-			subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=?";
-			subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderitemdata->m_id)));
-			CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
-			subrecordset->MoveFirst();
+			recordset->MoveFirst();
 
-			while(!subrecordset->EndOfFile)
+			while(!recordset->EndOfFile)
 			{
-				FeedData* feeditemdata = new FeedData();
-				feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
-				feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
-				feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
-				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, folderitem, TVI_LAST);
-				m_treeView.SetItemImage(feeditem, 0, 0);
-				m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
-				subrecordset->MoveNext();
-			}
+				FolderData* folderitemdata = new FolderData();
+				folderitemdata->m_id = recordset->Fields->GetItem("ID")->Value;
+				folderitemdata->m_name = recordset->Fields->GetItem("Name")->Value;
+				HTREEITEM folderitem = m_treeView.InsertItem(folderitemdata->m_name, m_feedsRoot, TVI_LAST);
+				m_treeView.SetItemImage(folderitem, 1, 1);
+				m_treeView.SetItemData(folderitem, (DWORD_PTR)folderitemdata);
+				CComPtr<ADODB::_Command> subcommand;
+				subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+				subcommand->ActiveConnection = m_connection;
+				subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=?";
+				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(folderitemdata->m_id)));
+				CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
 
-			recordset->MoveNext();
+				if(!subrecordset->EndOfFile)
+				{
+					subrecordset->MoveFirst();
+
+					while(!subrecordset->EndOfFile)
+					{
+						FeedData* feeditemdata = new FeedData();
+						feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
+						feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
+						feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
+						HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, folderitem, TVI_LAST);
+						m_treeView.SetItemImage(feeditem, 0, 0);
+						m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
+						subrecordset->MoveNext();
+					}
+				}
+
+				m_treeView.Expand(folderitem);
+				recordset->MoveNext();
+			}
 		}
 
 		CComPtr<ADODB::_Command> subcommand;
@@ -264,19 +273,23 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		subcommand->ActiveConnection = m_connection;
 		subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=0";
 		CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
-		subrecordset->MoveFirst();
 
-		while(!subrecordset->EndOfFile)
+		if(!subrecordset->EndOfFile)
 		{
-			int id = subrecordset->Fields->GetItem("ID")->Value;
-			FeedData* feeditemdata = new FeedData();
-			feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
-			feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
-			feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
-			HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, m_feedsRoot, TVI_LAST);
-			m_treeView.SetItemImage(feeditem, 0, 0);
-			m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
-			subrecordset->MoveNext();
+			subrecordset->MoveFirst();
+
+			while(!subrecordset->EndOfFile)
+			{
+				int id = subrecordset->Fields->GetItem("ID")->Value;
+				FeedData* feeditemdata = new FeedData();
+				feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
+				feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
+				feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
+				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, m_feedsRoot, TVI_LAST);
+				m_treeView.SetItemImage(feeditem, 0, 0);
+				m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
+				subrecordset->MoveNext();
+			}
 		}
 
 		m_treeView.Expand(m_feedsRoot);
@@ -398,6 +411,13 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 
 			if(hitem == m_feedsRoot || isFolder)
 			{
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				command->ActiveConnection = m_connection;
+				command->CommandText = "UPDATE Feeds SET FolderID=? WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(m_itemDrop))->m_id)));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(m_itemDrag))->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 				m_treeView.Expand(m_itemDrop, TVE_EXPAND);
 				HTREEITEM htiNew = MoveChildItem(m_itemDrag, m_itemDrop, TVI_LAST);
 				m_treeView.DeleteItem(m_itemDrag);
@@ -445,7 +465,17 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 
 		if(dlg.DoModal() == IDOK)
 		{
+			CComPtr<ADODB::_Recordset> recordset;
+			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			recordset->CursorLocation = ADODB::adUseServer;
+			recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+			recordset->AddNew();
+			recordset->Fields->GetItem("FolderID")->Value = 0;
+			recordset->Fields->GetItem("Name")->Value = _bstr_t(dlg.m_value);
+			recordset->Fields->GetItem("URL")->Value = _bstr_t(dlg.m_value);
+			recordset->Update();
 			FeedData* itemdata = new FeedData();
+			itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
 			itemdata->m_name = dlg.m_value;
 			itemdata->m_url = dlg.m_value;
 			HTREEITEM item = m_treeView.InsertItem(dlg.m_value, m_feedsRoot, TVI_LAST);
@@ -465,7 +495,15 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 
 		if(dlg.DoModal() == IDOK)
 		{
+			CComPtr<ADODB::_Recordset> recordset;
+			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			recordset->CursorLocation = ADODB::adUseServer;
+			recordset->Open(_bstr_t("Folders"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+			recordset->AddNew();
+			recordset->Fields->GetItem("Name")->Value = _bstr_t(dlg.m_value);
+			recordset->Update();
 			FolderData* itemdata = new FolderData();
+			itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
 			itemdata->m_name = dlg.m_value;
 			HTREEITEM item = m_treeView.InsertItem(dlg.m_value, m_feedsRoot, TVI_LAST);
 			m_treeView.SetItemImage(item, 1, 1);
@@ -483,6 +521,23 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 
 		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
 		{
+			CComPtr<ADODB::_Command> command;
+			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			command->ActiveConnection = m_connection;
+
+			if(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
+			{
+				command->CommandText = "DELETE FROM Feeds WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			}
+			else if(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
+			{
+				command->CommandText = "DELETE FROM Folders WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			}
+
 			delete (TreeData*)m_treeView.GetItemData(i);
 			m_treeView.DeleteItem(i);
 		}

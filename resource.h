@@ -35,13 +35,15 @@
 #define ID_VIEW_PROPERTIES              32789
 #define ID_ACTIONS_SENDMAIL             32794
 #define ID_ACTIONS_MARKALLREAD          32798
+#define ID_ACTIONS_MARKFLAGGED          32806
+#define ID_ACTIONS_MARKUNFLAGGED        32808
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        209
-#define _APS_NEXT_COMMAND_VALUE         32805
+#define _APS_NEXT_COMMAND_VALUE         32809
 #define _APS_NEXT_CONTROL_VALUE         1012
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

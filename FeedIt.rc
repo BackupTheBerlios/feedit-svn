@@ -99,6 +99,8 @@ BEGIN
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
         MENUITEM "Mark as r&ead",               ID_ACTIONS_MARKREAD
         MENUITEM "Mark as &unread",             ID_ACTIONS_MARKUNREAD
+        MENUITEM "Mark as &flagged",            ID_ACTIONS_MARKFLAGGED
+        MENUITEM "Mark as u&nflagged",          ID_ACTIONS_MARKUNFLAGGED
         MENUITEM SEPARATOR
         MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKALLREAD
         MENUITEM SEPARATOR
@@ -146,6 +148,8 @@ BEGIN
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
         MENUITEM "Mark as r&ead",               ID_ACTIONS_MARKREAD
         MENUITEM "Mark as &unread",             ID_ACTIONS_MARKUNREAD
+        MENUITEM "Mark as &flagged",            32806
+        MENUITEM "Mark as u&nflagged",          32808
     END
 END
 
@@ -420,6 +424,12 @@ BEGIN
     ID_VIEW_PROPERTIES      "Edit item properties\nProperties"
     ID_ACTIONS_SENDMAIL     "Send item by email\nSend by email"
     ID_ACTIONS_MARKALLREAD  "Mark all items as read\nMark all read"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_ACTIONS_MARKFLAGGED  "Mark item as flagged\nMark as flagged"
+    ID_ACTIONS_MARKUNFLAGGED "Mark item as unflagged\nMark as unflagged"
 END
 
 #endif    // English (U.S.) resources

@@ -41,8 +41,16 @@ public:
 		{
 			NMLVCUSTOMDRAW* pLVCD = reinterpret_cast<NMLVCUSTOMDRAW*>(lpNMCustomDraw);
 			NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)GetItemData(pLVCD->nmcd.dwItemSpec));
-			if(newsdata != NULL && newsdata->m_unread)
-				::SelectObject(pLVCD->nmcd.hdc, AtlCreateBoldFont());
+
+			if(newsdata != NULL)
+			{
+				if(newsdata->m_unread)
+					::SelectObject(pLVCD->nmcd.hdc, AtlCreateBoldFont());
+
+				if(newsdata->m_flagged)
+					pLVCD->clrText = RGB(255, 0, 0);
+			}
+
 			return CDRF_NEWFONT;
 		}
 		else

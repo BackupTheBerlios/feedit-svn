@@ -29,6 +29,13 @@ public:
 		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
 		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:atom=\"http://purl.org/atom/ns#\""));
 		xmldocument->load(_variant_t(url));
+
+		if(xmldocument->parseError->errorCode != 0)
+		{
+			m_error = (char*)xmldocument->parseError->reason;
+			return;
+		}
+
 		CComPtr<MSXML2::IXMLDOMNode> node;
 
 		if((node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"))) != NULL)
@@ -36,6 +43,7 @@ public:
 			m_type = FPFT_RSS09;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
 			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("rss09:link"));
+			CComPtr<MSXML2::IXMLDOMNode> imagenode = node->selectSingleNode(_bstr_t("rss09:image/@rdf:resource"));
 			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
 
 			if(titlenode != NULL)
@@ -43,6 +51,9 @@ public:
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
+
+			if(imagenode != NULL)
+				m_image = (LPTSTR)imagenode->text;
 
 			if(descriptionnode != NULL)
 				m_description = (LPTSTR)descriptionnode->text;
@@ -52,6 +63,7 @@ public:
 			m_type = FPFT_RSS10;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
 			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("rss10:link"));
+			CComPtr<MSXML2::IXMLDOMNode> imagenode = node->selectSingleNode(_bstr_t("rss10:image/@rdf:resource"));
 			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
 
 			if(titlenode != NULL)
@@ -59,6 +71,9 @@ public:
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
+
+			if(imagenode != NULL)
+				m_image = (LPTSTR)imagenode->text;
 
 			if(descriptionnode != NULL)
 				m_description = (LPTSTR)descriptionnode->text;
@@ -68,6 +83,7 @@ public:
 			m_type = FPFT_RSS20;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
 			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("link"));
+			CComPtr<MSXML2::IXMLDOMNode> imagenode = node->selectSingleNode(_bstr_t("image/url"));
 			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
 
 			if(titlenode != NULL)
@@ -75,6 +91,9 @@ public:
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
+
+			if(imagenode != NULL)
+				m_image = (LPTSTR)imagenode->text;
 
 			if(descriptionnode != NULL)
 				m_description = (LPTSTR)descriptionnode->text;
@@ -84,6 +103,7 @@ public:
 			m_type = FPFT_ATOM;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("atom:title"));
 			CComPtr<MSXML2::IXMLDOMNode> linknode = xmldocument->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
+			CComPtr<MSXML2::IXMLDOMNode> imagenode = xmldocument->selectSingleNode(_bstr_t("atom:image/atom:link[@rel=\"alternate\"]/@href"));
 			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = xmldocument->selectSingleNode(_bstr_t("atom:tagline"));
 
 			if(titlenode != NULL)
@@ -91,6 +111,9 @@ public:
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
+
+			if(imagenode != NULL)
+				m_image = (LPTSTR)imagenode->text;
 
 			if(descriptionnode != NULL)
 				m_description = (LPTSTR)descriptionnode->text;
@@ -248,8 +271,10 @@ public:
 	}
 
 	FeedType m_type;
+	CAtlString m_error;
 	CAtlString m_title;
 	CAtlString m_link;
+	CAtlString m_image;
 	CAtlString m_description;
 	CAtlArray<FeedItem> m_items;
 };

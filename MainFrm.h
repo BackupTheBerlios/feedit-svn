@@ -77,7 +77,7 @@ public:
 			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultMaxAge', '30')"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Folders (Name) VALUES ('Sample feeds')"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Link VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastError VARCHAR(255) NOT NULL DEFAULT '', Link VARCHAR(255) NOT NULL DEFAULT '', ImageLink VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
@@ -125,6 +125,12 @@ public:
 			{
 				UpdateFeedProperties(feeddata);
 				feeddata->m_unread = GetUnreadItemCount(feeddata->m_id);
+
+				if(feeddata->m_error.GetLength() == 0)
+					m_treeView.SetItemImage(i, 0, 0);
+				else
+					m_treeView.SetItemImage(i, 2, 2);
+
 				CAtlString txt;
 				m_treeView.GetItemText(i, txt);
 				m_treeView.SetItemText(i, txt);
@@ -288,6 +294,10 @@ public:
 				RefreshTree();
 				RefreshList();
 				m_newItems = 0;
+			}
+			else
+			{
+				RefreshTree();
 			}
 
 			m_mustRefresh = FALSE;
@@ -477,7 +487,9 @@ public:
 						for(size_t i = 0; i < fp.m_items.GetCount(); ++i)
 							AddNewsToFeed(feedid, fp.m_items[i]);
 
+						recordset->Fields->GetItem("LastError")->Value = (_bstr_t)fp.m_error;
 						recordset->Fields->GetItem("Link")->Value = (_bstr_t)fp.m_link;
+						recordset->Fields->GetItem("ImageLink")->Value = (_bstr_t)fp.m_image;
 						recordset->Fields->GetItem("Description")->Value = (_bstr_t)fp.m_description;
 						recordset->Fields->GetItem("LastUpdate")->Value = (BSTR)CComBSTR(now.Format("%Y/%m/%d %H:%M:%S"));
 						recordset->Update();
@@ -640,7 +652,9 @@ public:
 		if(!recordset->EndOfFile)
 		{
 			recordset->MoveFirst();
+			feeddata->m_error = recordset->Fields->GetItem("LastError")->Value;
 			feeddata->m_link = recordset->Fields->GetItem("Link")->Value;
+			feeddata->m_image = recordset->Fields->GetItem("ImageLink")->Value;
 			feeddata->m_description = recordset->Fields->GetItem("Description")->Value;
 		}
 	}
@@ -756,7 +770,7 @@ public:
 		::SendMessage(m_treeView.m_hWnd, CCM_SETVERSION, 5, 0);
 		m_treeView.SetDlgCtrlID(IDC_TREE);
 		CImageList tvil;
-		tvil.Create(IDB_TREE_IMAGELIST, 16, 2, RGB(192, 192, 192));
+		tvil.Create(IDB_TREE_IMAGELIST, 16, 3, RGB(192, 192, 192));
 		m_treeView.SetImageList(tvil.Detach(), TVSIL_NORMAL);
 		m_vSplit.SetSplitterPane(0, m_treeView);
 
@@ -826,13 +840,20 @@ public:
 					{
 						FeedData* feeditemdata = new FeedData();
 						feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
+						feeditemdata->m_error = subrecordset->Fields->GetItem("LastError")->Value;
 						feeditemdata->m_title = subrecordset->Fields->GetItem("Title")->Value;
 						feeditemdata->m_link = subrecordset->Fields->GetItem("Link")->Value;
+						feeditemdata->m_image = subrecordset->Fields->GetItem("ImageLink")->Value;
 						feeditemdata->m_description = subrecordset->Fields->GetItem("Description")->Value;
 						feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 						feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
 						HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_title, folderitem, TVI_LAST);
-						m_treeView.SetItemImage(feeditem, 0, 0);
+
+						if(feeditemdata->m_error.GetLength() == 0)
+							m_treeView.SetItemImage(feeditem, 0, 0);
+						else
+							m_treeView.SetItemImage(feeditem, 2, 2);
+
 						m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
 						subrecordset->MoveNext();
 					}
@@ -859,13 +880,20 @@ public:
 				int id = subrecordset->Fields->GetItem("ID")->Value;
 				FeedData* feeditemdata = new FeedData();
 				feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
+				feeditemdata->m_error = subrecordset->Fields->GetItem("LastError")->Value;
 				feeditemdata->m_title = subrecordset->Fields->GetItem("Title")->Value;
 				feeditemdata->m_link = subrecordset->Fields->GetItem("Link")->Value;
+				feeditemdata->m_image = subrecordset->Fields->GetItem("ImageLink")->Value;
 				feeditemdata->m_description = subrecordset->Fields->GetItem("Description")->Value;
 				feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 				feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
 				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_title, m_feedsRoot, TVI_LAST);
-				m_treeView.SetItemImage(feeditem, 0, 0);
+
+				if(feeditemdata->m_error.GetLength() == 0)
+					m_treeView.SetItemImage(feeditem, 0, 0);
+				else
+					m_treeView.SetItemImage(feeditem, 2, 2);
+
 				m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
 				subrecordset->MoveNext();
 			}
@@ -1291,7 +1319,12 @@ public:
 				if(feeddata != NULL)
 				{
 					CAtlString tmp;
-					tmp.Format("\t<div class=\"newspapertitle\"><a href=\"%s\">%s</a> - %s</div>", feeddata->m_link, feeddata->m_title, feeddata->m_description);
+
+					if(feeddata->m_image.GetLength() > 0)
+						tmp.Format("\t<div class=\"newspapertitle\"><img src=\"%s\"><br><a href=\"%s\">%s</a> - %s</div>", feeddata->m_image, feeddata->m_link, feeddata->m_title, feeddata->m_description);
+					else
+						tmp.Format("\t<div class=\"newspapertitle\"><a href=\"%s\">%s</a> - %s</div>", feeddata->m_link, feeddata->m_title, feeddata->m_description);
+
 					WriteLine(hFile, tmp);
 				}
 				else if(folderdata != NULL)
@@ -1631,6 +1664,9 @@ public:
 			}
 			else
 			{
+				CAtlString tmp;
+				tmp.Format("The URL you entered doesn't point to a good feed.\nThe error is: %s", fp.m_error);
+				AtlMessageBox(m_hWnd, tmp.GetBuffer(), "Error", MB_OK | MB_ICONERROR);
 			}
 		}
 
@@ -1723,7 +1759,7 @@ public:
 			ATLASSERT(command != NULL);
 			command->ActiveConnection = m_connection;
 			command->CommandText = "SELECT * FROM Feeds WHERE ID=?";
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 
 			if(!recordset->EndOfFile)
@@ -1742,13 +1778,13 @@ public:
 					subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
 					ATLASSERT(subcommand != NULL);
 					subcommand->ActiveConnection = m_connection;
-					subcommand->CommandText = "UPDATE Feeds SET Name=?, URL=?, RefreshInterval=?, MaxAge=?, NavigateURL=? WHERE ID=?";
-					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_title)));
-					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_url)));
-					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_update)));
-					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_retain)));
-					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_browse)));
-					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+					subcommand->CommandText = "UPDATE Feeds SET Title=?, URL=?, RefreshInterval=?, MaxAge=?, NavigateURL=? WHERE ID=?";
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)sheet.m_propertiesPage.m_title));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)sheet.m_propertiesPage.m_url));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, sheet.m_propertiesPage.m_update));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, sheet.m_propertiesPage.m_retain));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, sheet.m_propertiesPage.m_browse));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 					CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
 					feeddata->m_title = sheet.m_propertiesPage.m_title;
 					feeddata->m_navigateURL = sheet.m_propertiesPage.m_browse;

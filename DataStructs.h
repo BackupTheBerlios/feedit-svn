@@ -27,8 +27,10 @@ public:
 		return "Feed";
 	}
 
+	CAtlString m_error;
 	CAtlString m_title;
 	CAtlString m_link;
+	CAtlString m_image;
 	CAtlString m_description;
 	int m_unread;
 	int m_navigateURL;

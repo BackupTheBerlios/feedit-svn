@@ -48,6 +48,7 @@ public:
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH), _bstr_t(), _bstr_t(), 0);
 			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL)"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME, Description MEMO)"), NULL, 0);
 		}
 	}
 
@@ -84,6 +85,7 @@ public:
 		MESSAGE_HANDLER(WM_MOUSEMOVE, OnMouseMove)
 		MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonUp)
 		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINDRAG, OnBeginDrag)
+		NOTIFY_HANDLER(IDC_TREE, TVN_SELCHANGED, OnTreeSelectionChanged)
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FEED, OnFileNewFeed)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
@@ -137,6 +139,63 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 	return hNewItem;
 }
 
+MSXML2::IXMLDOMDocument2Ptr LoadFeed(const char* url)
+{
+	CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
+	xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
+	xmldocument->async = FALSE;
+	xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
+	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:a=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\""));
+	xmldocument->load(_variant_t(url));
+	return xmldocument.Detach();
+}
+
+ATL::CString SniffFeedName(MSXML2::IXMLDOMDocument2Ptr xmldocument)
+{
+	CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/a:channel"));
+
+	if(node != NULL)
+	{
+		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("a:title"));
+
+		if(titlenode != NULL)
+			return ATL::CString(titlenode->text.GetBSTR());
+		else
+			return ATL::CString("(No name)");
+	}
+
+	return ATL::CString("(Unknown feed type)");
+}
+
+void GetFeedNews(MSXML2::IXMLDOMDocument2Ptr xmldocument, int feedid)
+{
+	CComPtr<ADODB::_Recordset> recordset;
+	recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+	recordset->CursorLocation = ADODB::adUseServer;
+	recordset->Open(_bstr_t("News"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+
+	CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/a:item"));
+
+	if(nodes != NULL)
+	{
+		CComPtr<MSXML2::IXMLDOMNode> node;
+
+		while((node = nodes->nextNode()) != NULL)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("a:title"));
+			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("a:link"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("a:description"));
+
+			recordset->AddNew();
+			recordset->Fields->GetItem("FeedID")->Value = feedid;
+			recordset->Fields->GetItem("Title")->Value = titlenode->text;
+			recordset->Fields->GetItem("URL")->Value = urlnode->text;
+			recordset->Fields->GetItem("Description")->Value = descriptionnode->text;
+			recordset->Update();
+		}
+	}
+}
+
 // Handler prototypes (uncomment arguments if needed):
 //	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 //	LRESULT CommandHandler(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -187,14 +246,14 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		// add the horizontal splitter to the right pane (1) of vertical splitter
 		m_vSplit.SetSplitterPane(1, m_hSplit);
 
-		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT, WS_EX_CLIENTEDGE);
+		m_treeView.Create(m_vSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE);
 		m_treeView.SetDlgCtrlID(IDC_TREE);
 		CImageList il;
 		il.Create(IDB_TREE_IMAGELIST, 16, 2, RGB(192, 192, 192));
 		m_treeView.SetImageList(il, TVSIL_NORMAL);
 		m_vSplit.SetSplitterPane(0, m_treeView);
 
-		m_listView.Create(m_hSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | LVS_REPORT | LVS_SINGLESEL, WS_EX_CLIENTEDGE);
+		m_listView.Create(m_hSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE);
 		m_hSplit.SetSplitterPane(0, m_listView);
 
 		m_htmlView.Create(m_hSplit.m_hWnd, rcDefault, _T("about:blank"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL | WS_VSCROLL, WS_EX_CLIENTEDGE);
@@ -202,9 +261,6 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		m_htmlView.SetExternalUIHandler(static_cast<IDocHostUIHandlerDispatch*>(this));
 		m_htmlView.QueryControl(&m_htmlCtrl);
 		DispEventAdvise(m_htmlCtrl);
-		CComVariant u("http://www.microsoft.com");
-		CComVariant v;
-		m_htmlCtrl->Navigate2(&u, &v, &v, &v, &v);
 
 		m_hWndClient = m_vSplit.m_hWnd;
 
@@ -297,15 +353,9 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 
 		m_listView.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT);
 		m_listView.AddColumn("Date", 0);
-		m_listView.AddColumn("Headline", 1);
-		m_listView.AddColumn("Topic", 2);
+		m_listView.AddColumn("Title", 1);
 		m_listView.SetColumnWidth(0, 100);
-		m_listView.SetColumnWidth(1, 300);
-		m_listView.SetColumnWidth(2, 150);
-
-		m_listView.InsertItem(0, "01/01/2004");
-		m_listView.AddItem(0, 1, "FeedIt rulez!");
-		m_listView.AddItem(0, 2, "development");
+		m_listView.SetColumnWidth(1, 400);
 
 		// register object for message filtering and idle updates
 		CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -452,6 +502,39 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 		return 0;
 	}
 
+	LRESULT OnTreeSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
+	{
+		m_listView.DeleteAllItems();
+		_variant_t v;
+		m_htmlCtrl->Navigate2(&_variant_t("about:blank"), &v, &v, &v, &v);
+		HTREEITEM i = m_treeView.GetSelectedItem();
+		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+
+		if(feeddata != NULL)
+		{
+			CComPtr<ADODB::_Command> command;
+			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			command->ActiveConnection = m_connection;
+			command->CommandText = "SELECT * FROM News WHERE FeedID=?";
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+			if(!recordset->EndOfFile)
+			{
+				recordset->MoveFirst();
+
+				while(!recordset->EndOfFile)
+				{
+					m_listView.InsertItem(0, "01/01/2004");
+					m_listView.AddItem(0, 1, ATL::CString(recordset->Fields->GetItem("Title")->Value));
+					recordset->MoveNext();
+				}
+			}
+		}
+
+		return 0;
+	}
+
 	LRESULT OnFileExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		PostMessage(WM_CLOSE);
@@ -465,24 +548,34 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 
 		if(dlg.DoModal() == IDOK)
 		{
+			CComPtr<MSXML2::IXMLDOMDocument2> xmldocument = LoadFeed(dlg.m_value);
+
+			if(xmldocument->parseError->errorCode != 0)
+			{
+				AtlMessageBox(m_hWnd, "An error occurred parsing the XML document", "Error", MB_OK | MB_ICONERROR);
+				return 0;
+			}
+
+			ATL::CString name = SniffFeedName(xmldocument.p);
 			CComPtr<ADODB::_Recordset> recordset;
 			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
 			recordset->CursorLocation = ADODB::adUseServer;
 			recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 			recordset->AddNew();
 			recordset->Fields->GetItem("FolderID")->Value = 0;
-			recordset->Fields->GetItem("Name")->Value = _bstr_t(dlg.m_value);
+			recordset->Fields->GetItem("Name")->Value = _bstr_t(name);
 			recordset->Fields->GetItem("URL")->Value = _bstr_t(dlg.m_value);
 			recordset->Update();
 			FeedData* itemdata = new FeedData();
 			itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
-			itemdata->m_name = dlg.m_value;
+			itemdata->m_name = name;
 			itemdata->m_url = dlg.m_value;
-			HTREEITEM item = m_treeView.InsertItem(dlg.m_value, m_feedsRoot, TVI_LAST);
+			HTREEITEM item = m_treeView.InsertItem(name, m_feedsRoot, TVI_LAST);
 			m_treeView.SetItemImage(item, 0, 0);
 			m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
 			m_treeView.SortChildren(m_feedsRoot, TRUE);
 			m_treeView.Expand(m_feedsRoot);
+			GetFeedNews(xmldocument.p, itemdata->m_id);
 		}
 
 		return 0;

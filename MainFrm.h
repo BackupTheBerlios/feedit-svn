@@ -86,6 +86,7 @@ public:
 		MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonUp)
 		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINDRAG, OnBeginDrag)
 		NOTIFY_HANDLER(IDC_TREE, TVN_SELCHANGED, OnTreeSelectionChanged)
+		NOTIFY_HANDLER(IDC_LIST, LVN_ITEMCHANGED, OnListSelectionChanged)
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FEED, OnFileNewFeed)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
@@ -145,18 +146,30 @@ MSXML2::IXMLDOMDocument2Ptr LoadFeed(const char* url)
 	xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
 	xmldocument->async = FALSE;
 	xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
-	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:a=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\""));
+	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\""));
 	xmldocument->load(_variant_t(url));
 	return xmldocument.Detach();
 }
 
 ATL::CString SniffFeedName(MSXML2::IXMLDOMDocument2Ptr xmldocument)
 {
-	CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/a:channel"));
+	CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"));
 
 	if(node != NULL)
 	{
-		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("a:title"));
+		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
+
+		if(titlenode != NULL)
+			return ATL::CString(titlenode->text.GetBSTR());
+		else
+			return ATL::CString("(No name)");
+	}
+
+	node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss10:channel"));
+
+	if(node != NULL)
+	{
+		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
 
 		if(titlenode != NULL)
 			return ATL::CString(titlenode->text.GetBSTR());
@@ -174,17 +187,17 @@ void GetFeedNews(MSXML2::IXMLDOMDocument2Ptr xmldocument, int feedid)
 	recordset->CursorLocation = ADODB::adUseServer;
 	recordset->Open(_bstr_t("News"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 
-	CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/a:item"));
+	CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss09:item"));
 
-	if(nodes != NULL)
+	if(nodes != NULL && nodes->length > 0)
 	{
 		CComPtr<MSXML2::IXMLDOMNode> node;
 
 		while((node = nodes->nextNode()) != NULL)
 		{
-			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("a:title"));
-			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("a:link"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("a:description"));
+			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
+			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss09:link"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
 
 			recordset->AddNew();
 			recordset->Fields->GetItem("FeedID")->Value = feedid;
@@ -193,6 +206,31 @@ void GetFeedNews(MSXML2::IXMLDOMDocument2Ptr xmldocument, int feedid)
 			recordset->Fields->GetItem("Description")->Value = descriptionnode->text;
 			recordset->Update();
 		}
+
+		return;
+	}
+
+	nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss10:item"));
+
+	if(nodes != NULL && nodes->length > 0)
+	{
+		CComPtr<MSXML2::IXMLDOMNode> node;
+
+		while((node = nodes->nextNode()) != NULL)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
+			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss10:link"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
+
+			recordset->AddNew();
+			recordset->Fields->GetItem("FeedID")->Value = feedid;
+			recordset->Fields->GetItem("Title")->Value = titlenode->text;
+			recordset->Fields->GetItem("URL")->Value = urlnode->text;
+			recordset->Fields->GetItem("Description")->Value = descriptionnode->text;
+			recordset->Update();
+		}
+
+		return;
 	}
 }
 
@@ -254,6 +292,7 @@ void GetFeedNews(MSXML2::IXMLDOMDocument2Ptr xmldocument, int feedid)
 		m_vSplit.SetSplitterPane(0, m_treeView);
 
 		m_listView.Create(m_hSplit.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE);
+		m_listView.SetDlgCtrlID(IDC_LIST);
 		m_hSplit.SetSplitterPane(0, m_listView);
 
 		m_htmlView.Create(m_hSplit.m_hWnd, rcDefault, _T("about:blank"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL | WS_VSCROLL, WS_EX_CLIENTEDGE);
@@ -527,9 +566,30 @@ void GetFeedNews(MSXML2::IXMLDOMDocument2Ptr xmldocument, int feedid)
 				{
 					m_listView.InsertItem(0, "01/01/2004");
 					m_listView.AddItem(0, 1, ATL::CString(recordset->Fields->GetItem("Title")->Value));
+					m_listView.SetItemData(0, (int)recordset->Fields->GetItem("ID")->Value);
 					recordset->MoveNext();
 				}
 			}
+		}
+
+		return 0;
+	}
+
+	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
+	{
+		int id = m_listView.GetItemData(m_listView.GetSelectedIndex());
+		CComPtr<ADODB::_Command> command;
+		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		command->ActiveConnection = m_connection;
+		command->CommandText = "SELECT * FROM News WHERE ID=?";
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(id)));
+		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+		if(!recordset->EndOfFile)
+		{
+			recordset->MoveFirst();
+			_variant_t v;
+			m_htmlCtrl->Navigate2(&recordset->Fields->GetItem("URL")->Value, &v, &v, &v, &v);
 		}
 
 		return 0;
@@ -614,18 +674,31 @@ void GetFeedNews(MSXML2::IXMLDOMDocument2Ptr xmldocument, int feedid)
 
 		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
 		{
-			CComPtr<ADODB::_Command> command;
-			command.CoCreateInstance(CComBSTR("ADODB.Command"));
-			command->ActiveConnection = m_connection;
-
 			if(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
 			{
-				command->CommandText = "DELETE FROM Feeds WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				{
+					CComPtr<ADODB::_Command> command;
+					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					command->ActiveConnection = m_connection;
+					command->CommandText = "DELETE FROM News WHERE FeedID=?";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
+					CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				}
+
+				{
+					CComPtr<ADODB::_Command> command;
+					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					command->ActiveConnection = m_connection;
+					command->CommandText = "DELETE FROM Feeds WHERE ID=?";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
+					CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				}
 			}
 			else if(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
 			{
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				command->ActiveConnection = m_connection;
 				command->CommandText = "DELETE FROM Folders WHERE ID=?";
 				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
 				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);

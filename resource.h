@@ -18,8 +18,12 @@
 #define IDC_VALUE                       1002
 #define IDC_FEED_NAME                   1003
 #define IDC_FEED_URL                    1004
-#define IDC_FEED_UPDATE                 1007
-#define IDC_FEED_UPDATE_SPIN            1008
+#define IDC_FEED_UPDATE                 1009
+#define IDC_FEED_RETAIN                 1010
+#define IDC_FEED_BROWSE_DEFAULT         1011
+#define IDC_FEED_BROWSE_SUMMARY         1012
+#define IDC_FEED_BROWSE_SUMMARY2        1013
+#define IDC_FEED_BROWSE_LINK            1013
 #define ID_FILE_NEW_FEED                32772
 #define ID_FILE_NEW_FOLDER              32773
 #define ID_FILE_DELETE                  32774
@@ -33,9 +37,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        208
+#define _APS_NEXT_RESOURCE_VALUE        209
 #define _APS_NEXT_COMMAND_VALUE         32794
-#define _APS_NEXT_CONTROL_VALUE         1009
+#define _APS_NEXT_CONTROL_VALUE         1012
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

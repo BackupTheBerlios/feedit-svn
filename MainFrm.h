@@ -385,15 +385,23 @@ public:
 			{
 				COleDateTime t1;
 				t1.ParseDateTime((_bstr_t)recordset->Fields->GetItem("LastUpdate")->Value);
-				COleDateTimeSpan s1(0, 0, recordset->Fields->GetItem("RefreshInterval")->Value, 0);
+				int refresh = recordset->Fields->GetItem("RefreshInterval")->Value;
 
-				if(t1+s1 < now)
+				if(refresh == -1)
+					refresh = 60;
+
+				if(refresh > 0)
 				{
-					int feedid = recordset->Fields->GetItem("ID")->Value;
-					_bstr_t url = recordset->Fields->GetItem("URL")->Value;
-					GetFeedNews(feedid, url);
-					recordset->Fields->GetItem("LastUpdate")->Value = (BSTR)CComBSTR(now.Format("%Y/%m/%d %H:%M:%S"));
-					recordset->Update();
+					COleDateTimeSpan s1(0, 0, refresh, 0);
+
+					if(t1+s1 < now)
+					{
+						int feedid = recordset->Fields->GetItem("ID")->Value;
+						_bstr_t url = recordset->Fields->GetItem("URL")->Value;
+						GetFeedNews(feedid, url);
+						recordset->Fields->GetItem("LastUpdate")->Value = (BSTR)CComBSTR(now.Format("%Y/%m/%d %H:%M:%S"));
+						recordset->Update();
+					}
 				}
 
 				recordset->MoveNext();
@@ -1249,7 +1257,7 @@ public:
 						WriteLine(hFile, tmp);
 						tmp.Format("\t<div class=\"newsitemcontent\">%s</div>\n", (const char*)(_bstr_t)recordset->Fields->GetItem("Description")->Value);
 						WriteLine(hFile, tmp);
-						tmp.Format("\t<div class=\"newsitemfooter\">Received %s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("Issued")->Value);
+						tmp.Format("\t<div class=\"newsitemfooter\">%s - Received %s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("Name")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("Issued")->Value);
 						WriteLine(hFile, tmp);
 
 						if(x % 2 == 0)
@@ -1349,7 +1357,7 @@ public:
 			FeedData* feeddata = dynamic_cast<FeedData*>((FeedData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
 			_variant_t url;
 
-			if(feeddata->m_navigateURL == 1 || (feeddata->m_navigateURL == 0 && strlen(newsdata->m_description) < 60))
+			if(feeddata->m_navigateURL == 2 || (feeddata->m_navigateURL == 0 && strlen(newsdata->m_description) < 60))
 			{
 				url = newsdata->m_url;
 			}
@@ -1609,6 +1617,8 @@ public:
 				sheet.m_propertiesPage.m_name = recordset->Fields->GetItem("Name")->Value;
 				sheet.m_propertiesPage.m_url = recordset->Fields->GetItem("URL")->Value;
 				sheet.m_propertiesPage.m_update = recordset->Fields->GetItem("RefreshInterval")->Value;
+				sheet.m_propertiesPage.m_retain = recordset->Fields->GetItem("MaxAge")->Value;
+				sheet.m_propertiesPage.m_browse = recordset->Fields->GetItem("NavigateURL")->Value;
 
 				if(sheet.DoModal() == IDOK)
 				{
@@ -1616,13 +1626,16 @@ public:
 					subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
 					ATLASSERT(subcommand != NULL);
 					subcommand->ActiveConnection = m_connection;
-					subcommand->CommandText = "UPDATE Feeds SET Name=?, URL=?, RefreshInterval=? WHERE ID=?";
+					subcommand->CommandText = "UPDATE Feeds SET Name=?, URL=?, RefreshInterval=?, MaxAge=?, NavigateURL=? WHERE ID=?";
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_name)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_url)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_update)));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_retain)));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_browse)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
 					CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
 					feeddata->m_name = sheet.m_propertiesPage.m_name;
+					feeddata->m_navigateURL = sheet.m_propertiesPage.m_browse;
 					m_treeView.SetItemText(i, feeddata->m_name);
 					m_treeView.SortChildren(m_feedsRoot, TRUE);
 				}

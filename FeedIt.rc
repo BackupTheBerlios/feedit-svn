@@ -179,15 +179,21 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     LTEXT           "Name:",IDC_STATIC,7,9,22,8
     EDITTEXT        IDC_FEED_NAME,43,7,160,12,ES_AUTOHSCROLL
-    LTEXT           "URL:",IDC_STATIC,7,26,22,8
-    EDITTEXT        IDC_FEED_URL,43,24,160,12,ES_AUTOHSCROLL
-    LTEXT           "Update every",IDC_STATIC,7,44,45,8
-    EDITTEXT        IDC_FEED_UPDATE,56,42,33,12,ES_RIGHT | ES_AUTOHSCROLL | 
-                    ES_NUMBER
-    CONTROL         "",IDC_FEED_UPDATE_SPIN,"msctls_updown32",
-                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS,78,42,11,12
-    LTEXT           "minutes",IDC_STATIC,93,44,26,8
+    LTEXT           "URL:",IDC_STATIC,7,25,22,8
+    EDITTEXT        IDC_FEED_URL,43,23,160,12,ES_AUTOHSCROLL
+    LTEXT           "Update:",IDC_STATIC,7,41,27,8
+    COMBOBOX        IDC_FEED_UPDATE,43,39,160,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Retain:",IDC_STATIC,7,57,24,8
+    COMBOBOX        IDC_FEED_RETAIN,43,55,160,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Browsing",IDC_STATIC,43,71,160,55
+    CONTROL         "Automatic",IDC_FEED_BROWSE_DEFAULT,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP,51,82,48,10
+    CONTROL         "Summary",IDC_FEED_BROWSE_SUMMARY,"Button",
+                    BS_AUTORADIOBUTTON,51,96,45,10
+    CONTROL         "Link",IDC_FEED_BROWSE_LINK,"Button",BS_AUTORADIOBUTTON,
+                    51,110,28,10
 END
 
 
@@ -219,8 +225,13 @@ BEGIN
     BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 203
+        VERTGUIDE, 43
         TOPMARGIN, 7
         BOTTOMMARGIN, 147
+        HORZGUIDE, 23
+        HORZGUIDE, 39
+        HORZGUIDE, 55
+        HORZGUIDE, 71
     END
 END
 #endif    // APSTUDIO_INVOKED

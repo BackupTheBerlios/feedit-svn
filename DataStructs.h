@@ -26,5 +26,5 @@ public:
 		return "Feed";
 	}
 
-	CAtlString m_url;
+	int m_unread;
 };

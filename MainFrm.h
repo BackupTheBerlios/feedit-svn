@@ -24,7 +24,7 @@ public:
 	CProgressBarCtrl m_progressBar;
 	CSplitterWindow m_vSplit;
 	CHorSplitterWindow m_hSplit;
-	CTreeViewCtrl m_treeView;
+	CCustomTreeViewCtrl m_treeView;
 	CCustomListViewCtrl m_listView;
 	CAxWindow m_htmlView;
 	CComPtr<IWebBrowser2> m_htmlCtrl;
@@ -111,6 +111,7 @@ public:
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
+		CHAIN_MSG_MAP_MEMBER(m_treeView)
 		CHAIN_MSG_MAP_MEMBER(m_listView)
 		CHAIN_MSG_MAP(CTrayIconImpl<CMainFrame>)
 		CHAIN_MSG_MAP(CUpdateUI<CMainFrame>)
@@ -127,223 +128,241 @@ public:
 		SINK_ENTRY_EX(0, SHDocVw::DIID_DWebBrowserEvents2, DISPID_PROGRESSCHANGE, OnProgressChange)
 	END_SINK_MAP()
 
-HRESULT CloseHandle(HANDLE hObject)
-{
-	if (!::CloseHandle(hObject))
-		return AtlHresultFromLastError();
-
-	return S_OK;
-}
-
-HRESULT Execute(DWORD_PTR /*dwParam*/, HANDLE /*hObject*/)
-{
-	::CoInitialize(NULL);
-	CComPtr<ADODB::_Recordset> recordset;
-	recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
-	recordset->CursorLocation = ADODB::adUseServer;
-	SYSTEMTIME t;
-	::GetSystemTime(&t);
-	COleDateTime now(t);
-	recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
-
-	if(!recordset->EndOfFile)
+	HRESULT CloseHandle(HANDLE hObject)
 	{
-		recordset->MoveFirst();
+		if (!::CloseHandle(hObject))
+			return AtlHresultFromLastError();
 
-		while(!recordset->EndOfFile)
-		{
-			COleDateTime t1;
-			t1.ParseDateTime((_bstr_t)recordset->Fields->GetItem("LastUpdate")->Value);
-			COleDateTimeSpan s1(0, 0, recordset->Fields->GetItem("RefreshInterval")->Value, 0);
-
-			if(t1+s1 < now)
-			{
-				int feedid = recordset->Fields->GetItem("ID")->Value;
-				_bstr_t url = recordset->Fields->GetItem("URL")->Value;
-				GetFeedNews(feedid, url);
-				recordset->Fields->GetItem("LastUpdate")->Value = (BSTR)CComBSTR(now.Format("%Y/%m/%d %H:%M:%S"));
-				recordset->Update();
-			}
-
-			recordset->MoveNext();
-		}
+		return S_OK;
 	}
 
-	::CoUninitialize();
-	return S_OK;
-}
-
-HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAfter)
-{
-	TV_INSERTSTRUCT tvstruct;
-	HTREEITEM hNewItem;
-	CAtlString sText;
-
-	// get information of the source item
-	tvstruct.item.hItem = hItem;
-	tvstruct.item.mask = TVIF_CHILDREN | TVIF_HANDLE | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-	m_treeView.GetItem(&tvstruct.item);
-	m_treeView.GetItemText(hItem, sText);
-
-	tvstruct.item.cchTextMax = sText.GetLength();
-	tvstruct.item.pszText = sText.LockBuffer();
-
-	//insert the item at proper location
-	tvstruct.hParent = htiNewParent;
-	tvstruct.hInsertAfter = htiAfter;
-	tvstruct.item.mask = TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT;
-	hNewItem = m_treeView.InsertItem(&tvstruct);
-	sText.ReleaseBuffer();
-
-	//now copy item data and item state.
-	m_treeView.SetItemData(hNewItem, m_treeView.GetItemData(hItem));
-	m_treeView.SetItemState(hNewItem, m_treeView.GetItemState(hItem, TVIS_STATEIMAGEMASK), TVIS_STATEIMAGEMASK);
-
-	//now delete the old item
-	m_treeView.DeleteItem(hItem);
-
-	return hNewItem;
-}
-
-CAtlString SniffFeedName(const _bstr_t& url)
-{
-	CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
-	xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
-	xmldocument->async = FALSE;
-	xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
-	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
-	xmldocument->load(_variant_t(url));
-	CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rss/channel"));
-
-	if(node != NULL)
+	HRESULT Execute(DWORD_PTR /*dwParam*/, HANDLE /*hObject*/)
 	{
-		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
-
-		if(titlenode != NULL)
-			return CAtlString(titlenode->text.GetBSTR());
-		else
-			return CAtlString("(No name)");
-	}
-
-	node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"));
-
-	if(node != NULL)
-	{
-		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
-
-		if(titlenode != NULL)
-			return CAtlString(titlenode->text.GetBSTR());
-		else
-			return CAtlString("(No name)");
-	}
-
-	node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss10:channel"));
-
-	if(node != NULL)
-	{
-		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
-
-		if(titlenode != NULL)
-			return CAtlString(titlenode->text.GetBSTR());
-		else
-			return CAtlString("(No name)");
-	}
-
-	return CAtlString("(Unknown feed type)");
-}
-
-void AddNewsToFeed(int feedid, const _bstr_t& title, const _bstr_t& url, const _bstr_t& description, const _bstr_t& date)
-{
-	try
-	{
-		CAtlString t1((const char*)date);
-		CAtlString t2;
-		t2 += t1.Mid(0, 10);
-		t2 += " ";
-		t2 += t1.Mid(11, 8);
-
+		::CoInitialize(NULL);
 		CComPtr<ADODB::_Recordset> recordset;
 		recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
 		recordset->CursorLocation = ADODB::adUseServer;
-		recordset->Open(_bstr_t("News"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
-		recordset->AddNew();
-		recordset->Fields->GetItem("FeedID")->Value = feedid;
-		recordset->Fields->GetItem("Title")->Value = title;
-		recordset->Fields->GetItem("URL")->Value = url;
-		recordset->Fields->GetItem("Description")->Value = description;
-		recordset->Fields->GetItem("Issued")->Value = _bstr_t(t2);
-		recordset->Fields->GetItem("Unread")->Value = _bstr_t("Y");
-		recordset->Fields->GetItem("Flagged")->Value = _bstr_t("N");
-		recordset->Update();
+		SYSTEMTIME t;
+		::GetSystemTime(&t);
+		COleDateTime now(t);
+		recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+
+		if(!recordset->EndOfFile)
+		{
+			recordset->MoveFirst();
+
+			while(!recordset->EndOfFile)
+			{
+				COleDateTime t1;
+				t1.ParseDateTime((_bstr_t)recordset->Fields->GetItem("LastUpdate")->Value);
+				COleDateTimeSpan s1(0, 0, recordset->Fields->GetItem("RefreshInterval")->Value, 0);
+
+				if(t1+s1 < now)
+				{
+					int feedid = recordset->Fields->GetItem("ID")->Value;
+					_bstr_t url = recordset->Fields->GetItem("URL")->Value;
+					GetFeedNews(feedid, url);
+					recordset->Fields->GetItem("LastUpdate")->Value = (BSTR)CComBSTR(now.Format("%Y/%m/%d %H:%M:%S"));
+					recordset->Update();
+				}
+
+				recordset->MoveNext();
+			}
+		}
+
+		::CoUninitialize();
+		return S_OK;
 	}
-	catch(...)
+
+	HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAfter)
 	{
+		TV_INSERTSTRUCT tvstruct;
+		HTREEITEM hNewItem;
+		CAtlString sText;
+
+		// get information of the source item
+		tvstruct.item.hItem = hItem;
+		tvstruct.item.mask = TVIF_CHILDREN | TVIF_HANDLE | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+		m_treeView.GetItem(&tvstruct.item);
+		m_treeView.GetItemText(hItem, sText);
+
+		tvstruct.item.cchTextMax = sText.GetLength();
+		tvstruct.item.pszText = sText.LockBuffer();
+
+		//insert the item at proper location
+		tvstruct.hParent = htiNewParent;
+		tvstruct.hInsertAfter = htiAfter;
+		tvstruct.item.mask = TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT;
+		hNewItem = m_treeView.InsertItem(&tvstruct);
+		sText.ReleaseBuffer();
+
+		//now copy item data and item state.
+		m_treeView.SetItemData(hNewItem, m_treeView.GetItemData(hItem));
+		m_treeView.SetItemState(hNewItem, m_treeView.GetItemState(hItem, TVIS_STATEIMAGEMASK), TVIS_STATEIMAGEMASK);
+
+		//now delete the old item
+		m_treeView.DeleteItem(hItem);
+
+		return hNewItem;
 	}
-}
 
-void GetFeedNews(int feedid, const _bstr_t& url)
-{
-	CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
-	xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
-	xmldocument->async = FALSE;
-	xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
-	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
-	xmldocument->load(_variant_t(url));
-
-	CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rss/channel/item"));
-
-	if(nodes != NULL && nodes->length > 0)
+	CAtlString SniffFeedName(const _bstr_t& url)
 	{
-		CComPtr<MSXML2::IXMLDOMNode> node;
+		CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
+		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
+		xmldocument->async = FALSE;
+		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
+		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
+		xmldocument->load(_variant_t(url));
+		CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rss/channel"));
 
-		while((node = nodes->nextNode()) != NULL)
+		if(node != NULL)
 		{
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
-			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("link"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
-			CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("date"));
-			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
+
+			if(titlenode != NULL)
+				return CAtlString(titlenode->text.GetBSTR());
+			else
+				return CAtlString("(No name)");
 		}
 
-		return;
-	}
+		node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"));
 
-	nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss09:item"));
-
-	if(nodes != NULL && nodes->length > 0)
-	{
-		CComPtr<MSXML2::IXMLDOMNode> node;
-
-		while((node = nodes->nextNode()) != NULL)
+		if(node != NULL)
 		{
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
-			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss09:link"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
-			CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
-			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
+
+			if(titlenode != NULL)
+				return CAtlString(titlenode->text.GetBSTR());
+			else
+				return CAtlString("(No name)");
 		}
 
-		return;
-	}
+		node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss10:channel"));
 
-	nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss10:item"));
-
-	if(nodes != NULL && nodes->length > 0)
-	{
-		CComPtr<MSXML2::IXMLDOMNode> node;
-
-		while((node = nodes->nextNode()) != NULL)
+		if(node != NULL)
 		{
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
-			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss10:link"));
-			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
-			CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
-			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
+
+			if(titlenode != NULL)
+				return CAtlString(titlenode->text.GetBSTR());
+			else
+				return CAtlString("(No name)");
 		}
 
-		return;
+		return CAtlString("(Unknown feed type)");
 	}
-}
+
+	void AddNewsToFeed(int feedid, const _bstr_t& title, const _bstr_t& url, const _bstr_t& description, const _bstr_t& date)
+	{
+		try
+		{
+			CAtlString t1((const char*)date);
+			CAtlString t2;
+			t2 += t1.Mid(0, 10);
+			t2 += " ";
+			t2 += t1.Mid(11, 8);
+
+			CComPtr<ADODB::_Recordset> recordset;
+			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
+			recordset->CursorLocation = ADODB::adUseServer;
+			recordset->Open(_bstr_t("News"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+			recordset->AddNew();
+			recordset->Fields->GetItem("FeedID")->Value = feedid;
+			recordset->Fields->GetItem("Title")->Value = title;
+			recordset->Fields->GetItem("URL")->Value = url;
+			recordset->Fields->GetItem("Description")->Value = description;
+			recordset->Fields->GetItem("Issued")->Value = _bstr_t(t2);
+			recordset->Fields->GetItem("Unread")->Value = _bstr_t("Y");
+			recordset->Fields->GetItem("Flagged")->Value = _bstr_t("N");
+			recordset->Update();
+		}
+		catch(...)
+		{
+		}
+	}
+
+	void GetFeedNews(int feedid, const _bstr_t& url)
+	{
+		CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
+		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
+		xmldocument->async = FALSE;
+		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
+		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
+		xmldocument->load(_variant_t(url));
+
+		CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rss/channel/item"));
+
+		if(nodes != NULL && nodes->length > 0)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> node;
+
+			while((node = nodes->nextNode()) != NULL)
+			{
+				CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
+				CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("link"));
+				CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
+				CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("date"));
+				AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
+			}
+
+			return;
+		}
+
+		nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss09:item"));
+
+		if(nodes != NULL && nodes->length > 0)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> node;
+
+			while((node = nodes->nextNode()) != NULL)
+			{
+				CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
+				CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss09:link"));
+				CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
+				CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
+				AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
+			}
+
+			return;
+		}
+
+		nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss10:item"));
+
+		if(nodes != NULL && nodes->length > 0)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> node;
+
+			while((node = nodes->nextNode()) != NULL)
+			{
+				CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
+				CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss10:link"));
+				CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
+				CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
+				AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
+			}
+
+			return;
+		}
+	}
+
+	int GetUnreadItemCount(int feedid)
+	{
+		CComPtr<ADODB::_Command> command;
+		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		command->ActiveConnection = m_connection;
+		command->CommandText = "SELECT COUNT(*) AS ItemCount FROM News WHERE FeedID=? AND Unread='Y'";
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feedid)));
+		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+		if(!recordset->EndOfFile)
+		{
+			recordset->MoveFirst();
+			return (int)recordset->Fields->GetItem("ItemCount")->Value;
+		}
+
+		return 0;
+	}
 
 // Handler prototypes (uncomment arguments if needed):
 //	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -466,7 +485,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 						FeedData* feeditemdata = new FeedData();
 						feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
 						feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
-						feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
+						feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 						HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, folderitem, TVI_LAST);
 						m_treeView.SetItemImage(feeditem, 0, 0);
 						m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
@@ -495,7 +514,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 				FeedData* feeditemdata = new FeedData();
 				feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
 				feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
-				feeditemdata->m_url = subrecordset->Fields->GetItem("URL")->Value;
+				feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, m_feedsRoot, TVI_LAST);
 				m_treeView.SetItemImage(feeditem, 0, 0);
 				m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
@@ -782,6 +801,10 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(id)));
 				CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
 				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
+				HTREEITEM i = m_treeView.GetSelectedItem();
+				FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+				feeddata->m_unread--;
+				m_treeView.Invalidate();
 			}
 		}
 
@@ -837,7 +860,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 			FeedData* itemdata = new FeedData();
 			itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
 			itemdata->m_name = name;
-			itemdata->m_url = dlg.m_value;
+			itemdata->m_unread = 0;
 			HTREEITEM item = m_treeView.InsertItem(name, m_feedsRoot, TVI_LAST);
 			m_treeView.SetItemImage(item, 0, 0);
 			m_treeView.SetItemData(item, (DWORD_PTR)itemdata);

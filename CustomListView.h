@@ -7,7 +7,7 @@ class CCustomListViewCtrl :
 public:
 	BEGIN_MSG_MAP(CCustomListViewCtrl)    
 		CHAIN_MSG_MAP(CCustomDraw<CCustomListViewCtrl>)
-	END_MSG_MAP()          	
+	END_MSG_MAP()
 
 #if (_WTL_VER >= 0x0700)
 	BOOL m_bHandledCD;
@@ -25,9 +25,14 @@ public:
 	DWORD OnPrePaint(int idCtrl, LPNMCUSTOMDRAW /*lpNMCustomDraw*/)
 	{
 		if(::IsWindow(m_hWnd) && idCtrl == GetDlgCtrlID())
+		{
 			return CDRF_NOTIFYITEMDRAW;
+		}
 		else
+		{
+			SetMsgHandled(FALSE);
 			return CDRF_DODEFAULT;
+		}
 	}
 
 	DWORD OnItemPrePaint(int idCtrl, LPNMCUSTOMDRAW lpNMCustomDraw)
@@ -41,8 +46,12 @@ public:
 			GetItem(&lvi);
 			if(lvi.iImage == 1)
 				::SelectObject(pLVCD->nmcd.hdc, AtlCreateBoldFont());
+			return CDRF_NEWFONT;
 		}
-
-		return CDRF_DODEFAULT;
+		else
+		{
+			SetMsgHandled(FALSE);
+			return CDRF_DODEFAULT;
+		}
 	}
 };

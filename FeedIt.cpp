@@ -13,6 +13,7 @@
 #include "DataStructs.h"
 #include "AboutDlg.h"
 #include "StringDlg.h"
+#include "CustomTreeView.h"
 #include "CustomListView.h"
 #include "TrayIcon.h"
 #include "Settings.h"

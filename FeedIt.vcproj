@@ -164,6 +164,9 @@
 				RelativePath=".\CustomListView.h">
 			</File>
 			<File
+				RelativePath=".\CustomToolBar.h">
+			</File>
+			<File
 				RelativePath=".\CustomTreeView.h">
 			</File>
 			<File

@@ -14,6 +14,7 @@
 #include "FeedParser.h"
 #include "AboutDlg.h"
 #include "StringDlg.h"
+#include "CustomToolBar.h"
 #include "CustomTreeView.h"
 #include "CustomListView.h"
 #include "TrayIcon.h"

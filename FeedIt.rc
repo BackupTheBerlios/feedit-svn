@@ -116,6 +116,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
         MENUITEM "&Options...",                 ID_VIEW_OPTIONS
+        MENUITEM "&Customize toolbar...",       ID_VIEW_CUSTOMIZETOOLBAR
     END
     POPUP "&Help"
     BEGIN
@@ -464,6 +465,7 @@ BEGIN
     ID_ACTIONS_MARKUNFLAGGED "Mark item as unflagged\nMark as unflagged"
     ID_VIEW_OPTIONS         "Edit program options\nOptions"
     ID_ACTIONS_UPDATEFEEDS  "Update all feeds\nUpdate feeds"
+    ID_VIEW_CUSTOMIZETOOLBAR "Customize toolbar buttons\nCustomize toolbar"
 END
 
 #endif    // English (U.S.) resources

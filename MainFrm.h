@@ -9,6 +9,7 @@
 class CMainFrame :
 	public CFrameWindowImpl<CMainFrame>,
 	public CUpdateUI<CMainFrame>,
+	public CCustomizableToolBarCommands<CMainFrame>,
 	public CTrayIconImpl<CMainFrame>,
 	public CMessageFilter,
 	public CIdleHandler,
@@ -23,6 +24,7 @@ public:
 	TCHAR m_dbPath[MAX_PATH];
 	CCommandBarCtrl m_CmdBar;
 	CSearchBand m_SrcBar;
+	CToolBarCtrl m_toolBar;
 	CMultiPaneStatusBarCtrl m_statusBar;
 	CProgressBarCtrl m_progressBar;
 	CSplitterWindow m_vSplit;
@@ -409,6 +411,7 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
 		COMMAND_ID_HANDLER(ID_VIEW_PROPERTIES, OnViewProperties)
 		COMMAND_ID_HANDLER(ID_VIEW_OPTIONS, OnViewOptions)
+		COMMAND_ID_HANDLER(ID_VIEW_CUSTOMIZETOOLBAR, OnViewCustomizeToolbar)
 		COMMAND_ID_HANDLER(ID_ACTIONS_SENDMAIL, OnActionsSendMail)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKUNREAD, OnActionsMarkUnread)
@@ -426,6 +429,7 @@ public:
 		CHAIN_MSG_MAP_MEMBER(m_treeView)
 		CHAIN_MSG_MAP_MEMBER(m_listView)
 		CHAIN_MSG_MAP(CTrayIconImpl<CMainFrame>)
+		CHAIN_MSG_MAP(CCustomizableToolBarCommands<CMainFrame>)
 		CHAIN_MSG_MAP(CUpdateUI<CMainFrame>)
 		CHAIN_MSG_MAP(CFrameWindowImpl<CMainFrame>)
 		COMMAND_ID_HANDLER(IDC_SEARCH, OnSearch)
@@ -729,7 +733,10 @@ public:
 		// remove old menu
 		SetMenu(NULL);
 
-		HWND hWndToolBar = CreateSimpleToolBarCtrl(m_hWnd, IDR_MAINFRAME, FALSE, ATL_SIMPLE_TOOLBAR_PANE_STYLE);
+		HWND hWndToolBar = CreateSimpleToolBarCtrl(m_hWnd, IDR_MAINFRAME, FALSE, ATL_SIMPLE_TOOLBAR_PANE_STYLE | CCS_ADJUSTABLE);
+		InitToolBar(hWndToolBar, IDR_MAINFRAME);
+		m_toolBar = hWndToolBar;
+		m_toolBar.RestoreState(HKEY_CURRENT_USER, "Software\\FeedIt", "ToolBar");
 
 		HWND hWndSrcBar = m_SrcBar.Create(m_hWnd);
 
@@ -962,6 +969,8 @@ public:
 		CReBarCtrl rbc = m_hWndToolBar;
 		rs.GetFrom(rbc);
 		rs.Save("Software\\FeedIt", "ReBar");
+
+		m_toolBar.SaveState(HKEY_CURRENT_USER, "Software\\FeedIt", "ToolBar");
 
 		CSplitterSettings ss1;
 		ss1.GetFrom(m_hSplit);
@@ -1827,6 +1836,12 @@ public:
 			}
 		}
 
+		return 0;
+	}
+
+	LRESULT OnViewCustomizeToolbar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		m_toolBar.Customize();
 		return 0;
 	}
 

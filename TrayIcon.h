@@ -5,7 +5,7 @@ class CNotifyIconData : public NOTIFYICONDATA
 public:	
 	CNotifyIconData()
 	{
-		memset(this, 0, sizeof(NOTIFYICONDATA));
+		::ZeroMemory(this, sizeof(NOTIFYICONDATA));
 		cbSize = sizeof(NOTIFYICONDATA);
 	}
 };
@@ -37,7 +37,7 @@ public:
 		m_nid.hIcon = hIcon;
 		m_nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 		m_nid.uCallbackMessage = WM_TRAYICON;
-		_tcscpy(m_nid.szTip, lpszToolTip);
+		_tcsncpy(m_nid.szTip, lpszToolTip, sizeof(m_nid.szTip));
 		m_bInstalled = Shell_NotifyIcon(NIM_ADD, &m_nid) ? true : false;
 		return m_bInstalled;
 	}
@@ -52,10 +52,24 @@ public:
 
 	bool SetTooltipText(LPCTSTR pszTooltipText)
 	{
+		if (!m_bInstalled)
+			return false;
 		if (pszTooltipText == NULL)
 			return FALSE;
 		m_nid.uFlags = NIF_TIP;
-		_tcscpy(m_nid.szTip, pszTooltipText);
+		_tcsncpy(m_nid.szTip, pszTooltipText, sizeof(m_nid.szTip));
+		return Shell_NotifyIcon(NIM_MODIFY, &m_nid) ? true : false;
+	}
+
+	bool Notify(const char* info, const char* infotitle, DWORD infoflags = NIIF_INFO, UINT timeout = 10000)
+	{
+		if (!m_bInstalled)
+			return false;
+		m_nid.uFlags = NIF_INFO;
+		m_nid.dwInfoFlags = infoflags;
+		m_nid.uTimeout = 30;
+		_tcsncpy(m_nid.szInfo, info, sizeof(m_nid.szInfo));
+		_tcsncpy(m_nid.szInfoTitle, infotitle, sizeof(m_nid.szInfoTitle));
 		return Shell_NotifyIcon(NIM_MODIFY, &m_nid) ? true : false;
 	}
 

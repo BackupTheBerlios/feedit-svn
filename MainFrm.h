@@ -35,6 +35,7 @@ public:
 	int m_downloads;
 	BOOL m_dragging;
 	BOOL m_mustRefresh;
+	int m_newItems;
 	HTREEITEM m_feedsRoot;
 	HTREEITEM m_itemDrag;
 	HTREEITEM m_itemDrop;
@@ -43,8 +44,8 @@ public:
 	CWorkerThread<> m_updateThread;
 	HANDLE m_hTimer;
 
-	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_mustRefresh(FALSE), m_feedsRoot(NULL),
-		m_itemDrag(NULL), m_itemDrop(NULL), m_arrowCursor(LoadCursor(NULL, IDC_ARROW)),
+	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_mustRefresh(FALSE), m_newItems(0),
+		m_feedsRoot(NULL), m_itemDrag(NULL), m_itemDrop(NULL), m_arrowCursor(LoadCursor(NULL, IDC_ARROW)),
 		m_noCursor(LoadCursor(NULL, IDC_NO))
 	{
 		::SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, m_dbPath);
@@ -114,7 +115,15 @@ public:
 	{
 		if(m_mustRefresh)
 		{
-			RefreshTree();
+			if(m_newItems > 0)
+			{
+				CAtlString str;
+				str.Format("There are %d new items", m_newItems);
+				Notify(str, "FeedIt update");
+				RefreshTree();
+				m_newItems = 0;
+			}
+
 			m_mustRefresh = FALSE;
 			LARGE_INTEGER liDueTime;
 			liDueTime.QuadPart = -10000 * (__int64) REFRESH_INTERVAL;
@@ -215,8 +224,9 @@ public:
 			}
 		}
 
-		m_mustRefresh = TRUE;
 		::CoUninitialize();
+		m_mustRefresh = TRUE;
+		PostMessage(WM_NULL);
 		return S_OK;
 	}
 
@@ -334,6 +344,7 @@ public:
 			recordset->Fields->GetItem("Unread")->Value = _bstr_t("1");
 			recordset->Fields->GetItem("Flagged")->Value = _bstr_t("0");
 			recordset->Update();
+			++m_newItems;
 		}
 		catch(...)
 		{
@@ -617,13 +628,6 @@ public:
 		pLoop->AddMessageFilter(this);
 		pLoop->AddIdleHandler(this);
 
-		m_updateThread.Initialize();
-		m_hTimer = ::CreateWaitableTimer(NULL, FALSE, NULL);
-		m_updateThread.AddHandle(m_hTimer, this, NULL);
-		LARGE_INTEGER liDueTime;
-		liDueTime.QuadPart = -10000 * (__int64) REFRESH_INTERVAL;
-		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
-
 		HICON hIconSmall = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
 		InstallIcon(_T("FeedIt"), hIconSmall, IDR_TRAY_POPUP);
 
@@ -642,6 +646,13 @@ public:
 
 		if(ss2.Load("Software\\FeedIt", "VSplit"))
 			ss2.ApplyTo(m_vSplit);
+
+		m_updateThread.Initialize();
+		m_hTimer = ::CreateWaitableTimer(NULL, FALSE, NULL);
+		m_updateThread.AddHandle(m_hTimer, this, NULL);
+		LARGE_INTEGER liDueTime;
+		liDueTime.QuadPart = -10000;
+		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
 
 		return 0;
 	}

@@ -1,0 +1,544 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "atlres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""atlres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST ""res\\\\FeedIt.exe.manifest""\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR  16, 15
+BEGIN
+    BUTTON      ID_FILE_NEW_FEED
+    BUTTON      ID_FILE_NEW_FOLDER
+    SEPARATOR
+    BUTTON      ID_FILE_DELETE
+    SEPARATOR
+    BUTTON      ID_VIEW_PROPERTIES
+    SEPARATOR
+    BUTTON      ID_ACTIONS_MARKALLREAD
+    BUTTON      ID_ACTIONS_UPDATEFEEDS
+    SEPARATOR
+    BUTTON      ID_ACTIONS_SENDMAIL
+    BUTTON      ID_ACTIONS_OPENINBROWSER
+    BUTTON      ID_ACTIONS_TOGGLEUNREAD
+    BUTTON      ID_ACTIONS_TOGGLEFLAGGED
+    SEPARATOR
+    BUTTON      ID_ACTIONS_BACK
+    BUTTON      ID_ACTIONS_FORWARD
+    SEPARATOR
+    BUTTON      ID_APP_ABOUT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New Feed...\tCtrl+N",        ID_FILE_NEW_FEED
+        MENUITEM "New &Folder...\tCtrl+F",      ID_FILE_NEW_FOLDER
+        MENUITEM SEPARATOR
+        MENUITEM "&Delete\tDel",                ID_FILE_DELETE
+        MENUITEM SEPARATOR
+        MENUITEM "&Export OPML file...",        32814
+        MENUITEM "&Import OPML file...",        ID_FILE_IMPORT_OPML
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Actions"
+    BEGIN
+        MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
+        MENUITEM "&Open item in browser...\tCtrl+O", 32826
+        MENUITEM "Toggle &unread",              32818
+        MENUITEM "Toggle &flagged",             ID_ACTIONS_TOGGLEFLAGGED
+        MENUITEM SEPARATOR
+        MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKALLREAD
+        MENUITEM "U&pdate all feeds",           ID_ACTIONS_UPDATEFEEDS
+        MENUITEM SEPARATOR
+        MENUITEM "&Back",                       ID_ACTIONS_BACK
+        MENUITEM "&Forward",                    ID_ACTIONS_FORWARD
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
+        MENUITEM "&Options...",                 ID_VIEW_OPTIONS
+        MENUITEM "&Customize toolbar...",       ID_VIEW_CUSTOMIZETOOLBAR
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About FeedIt...",            ID_APP_ABOUT
+    END
+END
+
+IDR_TRAY_POPUP MENU 
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "&Show",                       ID_SHOW
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+END
+
+IDR_TREE_POPUP MENU 
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "Mark all read\tCtrl+R",       ID_ACTIONS_MARKALLREAD
+        MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
+        MENUITEM SEPARATOR
+        MENUITEM "&Delete\tDel",                ID_FILE_DELETE
+    END
+END
+
+IDR_LIST_POPUP MENU 
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
+        MENUITEM "&Open item in browser...\tCtrl+O", 
+                                                ID_ACTIONS_OPENINBROWSER
+        MENUITEM "Toggle &unread",              ID_ACTIONS_TOGGLEUNREAD
+        MENUITEM "Toggle &flagged",             32817
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\FeedIt.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 187, 102
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,130,81,50,14
+    CTEXT           "FeedIt %s",IDC_ABOUTTEXT,25,50,78,8
+    ICON            IDR_MAINFRAME,IDC_STATIC,55,26,20,20
+    GROUPBOX        "",IDC_STATIC,7,7,115,88
+    LTEXT           "(C) 2004 Sandro Tolaini",IDC_STATIC,26,66,75,8
+    LTEXT           "sandro@focuseek.com",IDC_STATIC,27,78,74,8,SS_NOTIFY
+END
+
+IDD_STRING DIALOGEX 0, 0, 186, 67
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,74,46,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,129,46,50,14
+    LTEXT           "Static",IDC_PROMPT,7,7,172,8
+    EDITTEXT        IDC_VALUE,7,21,172,12,ES_AUTOHSCROLL
+END
+
+IDD_FEED_PROPERTIES_PAGE DIALOGEX 0, 0, 210, 154
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Feed"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Title:",IDC_STATIC,7,9,17,8
+    EDITTEXT        IDC_FEED_TITLE,43,7,160,12,ES_AUTOHSCROLL
+    LTEXT           "URL:",IDC_STATIC,7,25,22,8
+    EDITTEXT        IDC_FEED_URL,43,23,160,12,ES_AUTOHSCROLL
+    LTEXT           "Update:",IDC_STATIC,7,41,27,8
+    COMBOBOX        IDC_FEED_UPDATE,43,39,160,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Retain:",IDC_STATIC,7,57,24,8
+    COMBOBOX        IDC_FEED_RETAIN,43,55,160,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Browsing",IDC_STATIC,43,71,160,55
+    CONTROL         "Automatic",IDC_FEED_BROWSE_DEFAULT,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP,51,82,48,10
+    CONTROL         "Summary",IDC_FEED_BROWSE_SUMMARY,"Button",
+                    BS_AUTORADIOBUTTON,51,96,45,10
+    CONTROL         "Link",IDC_FEED_BROWSE_LINK,"Button",BS_AUTORADIOBUTTON,
+                    51,110,28,10
+END
+
+IDD_OPTIONS_PAGE DIALOGEX 0, 0, 210, 154
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Options"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    CONTROL         "Automatically start at logon",IDC_OPTIONS_AUTOSTART,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,7,104,10
+    GROUPBOX        "Defaults",IDC_STATIC,8,23,195,51
+    LTEXT           "Update:",IDC_STATIC,19,37,27,8
+    COMBOBOX        IDC_OPTIONS_UPDATE,56,37,136,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Retain:",IDC_STATIC,19,52,24,8
+    COMBOBOX        IDC_OPTIONS_RETAIN,56,52,136,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 95
+    END
+
+    IDD_STRING, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 60
+    END
+
+    IDD_FEED_PROPERTIES_PAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        VERTGUIDE, 43
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+        HORZGUIDE, 23
+        HORZGUIDE, 39
+        HORZGUIDE, 55
+        HORZGUIDE, 71
+    END
+
+    IDD_OPTIONS_PAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        VERTGUIDE, 19
+        VERTGUIDE, 56
+        VERTGUIDE, 192
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+        HORZGUIDE, 37
+        HORZGUIDE, 52
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS 
+BEGIN
+    "R",            ID_ACTIONS_MARKALLREAD, VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_ACTIONS_SENDMAIL,    VIRTKEY, CONTROL, NOINVERT
+    VK_DELETE,      ID_FILE_DELETE,         VIRTKEY, NOINVERT
+    "N",            ID_FILE_NEW_FEED,       VIRTKEY, CONTROL, NOINVERT
+    "F",            ID_FILE_NEW_FOLDER,     VIRTKEY, CONTROL, NOINVERT
+    VK_TAB,         ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_TAB,         ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    "P",            ID_VIEW_PROPERTIES,     VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_ACTIONS_OPENINBROWSER, VIRTKEY, CONTROL, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,3,1
+ PRODUCTVERSION 1,0,3,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription", "FeedIt Module"
+            VALUE "FileVersion", "1, 0, 3, 1"
+            VALUE "InternalName", "FeedIt"
+            VALUE "LegalCopyright", "Copyright 2004"
+            VALUE "OriginalFilename", "FeedIt.exe"
+            VALUE "ProductName", "FeedIt Module"
+            VALUE "ProductVersion", "1, 0, 3, 1"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDR_MAINFRAME           "FeedIt"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
+    ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
+    ID_FILE_PRINT           "Print the active document\nPrint"
+    ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application\nExit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_WINDOW_NEW           "Open another window for the active document\nNew Window"
+    ID_WINDOW_ARRANGE       "Arrange icons at the bottom of the window\nArrange Icons"
+    ID_WINDOW_CASCADE       "Arrange windows so they overlap\nCascade Windows"
+    ID_WINDOW_TILE_HORZ     "Arrange windows as non-overlapping tiles\nTile Windows"
+    ID_WINDOW_TILE_VERT     "Arrange windows as non-overlapping tiles\nTile Windows"
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE 
+BEGIN
+    ATL_IDS_SCSIZE          "Change the window size"
+    ATL_IDS_SCMOVE          "Change the window position"
+    ATL_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    ATL_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    ATL_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    ATL_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    ATL_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE 
+BEGIN
+    ATL_IDS_SCRESTORE       "Restore the window to normal size"
+    ATL_IDS_SCTASKLIST      "Activate Task List"
+    ATL_IDS_MDICHILD        "Activate this window"
+END
+
+STRINGTABLE 
+BEGIN
+    ATL_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE 
+BEGIN
+    ATL_IDS_MRU_FILE        "Open this document"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW_FEED        "Add new feed\nNew feed"
+    ID_FILE_NEW_FOLDER      "Add new folder\nNew folder"
+    ID_FILE_DELETE          "Delete current item\nDelete"
+    ID_SHOW                 "Show application window\nShow"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_ACTIONS_BACK         "Navigate back\nBack"
+    ID_ACTIONS_FORWARD      "Navigate forward\nForward"
+    ID_VIEW_PROPERTIES      "Edit item properties\nProperties"
+    ID_ACTIONS_SENDMAIL     "Send item by email\nSend by email"
+    ID_ACTIONS_MARKALLREAD  "Mark all items as read\nMark all read"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_OPTIONS         "Edit program options\nOptions"
+    ID_ACTIONS_UPDATEFEEDS  "Update all feeds\nUpdate feeds"
+    ID_VIEW_CUSTOMIZETOOLBAR "Customize toolbar buttons\nCustomize toolbar"
+    ID_FILE_EXPORT_OPML     "Export OPML file\nExport OPML"
+    ID_FILE_IMPORT_OPML     "Import OPML file\nImport OPML"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_ACTIONS_TOGGLEFLAGGED "Toggle flagged message status\nToggle flagged"
+    ID_ACTIONS_TOGGLEUNREAD "Toggle unread message status\nToggle unread"
+    ID_ACTIONS_OPENINBROWSER "Open item in browser\nOpen in browser"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Italian (Italy) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ITA)
+#ifdef _WIN32
+LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_TREE_IMAGELIST      BITMAP                  "res\\treeimage.bmp"
+IDB_LIST_IMAGELIST      BITMAP                  "res\\listimage.bmp"
+#endif    // Italian (Italy) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral (Sys. Default) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUSD)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_SYS_DEFAULT
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SEARCH_BAND DIALOGEX 0, 0, 178, 12
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_SEARCHTEXT,0,0,152,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "Go",IDC_SEARCH,155,0,22,12
+END
+
+#endif    // Neutral (Sys. Default) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "res\\FeedIt.exe.manifest"
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

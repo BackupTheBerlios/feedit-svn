@@ -310,6 +310,11 @@ public:
 		else
 			UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
 
+		if(m_listView.GetSelectedIndex() >= 0)
+			UISetState(ID_ACTIONS_SENDMAIL, UPDUI_ENABLED);
+		else
+			UISetState(ID_ACTIONS_SENDMAIL, UPDUI_DISABLED);
+
 		UIUpdateToolBar();
 		return FALSE;
 	}
@@ -320,6 +325,7 @@ public:
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_VIEW_PROPERTIES, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_MARKREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_ACTIONS_SENDMAIL, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_BACK, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_FORWARD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 	END_UPDATE_UI_MAP()
@@ -343,6 +349,7 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
 		COMMAND_ID_HANDLER(ID_VIEW_PROPERTIES, OnViewProperties)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
+		COMMAND_ID_HANDLER(ID_ACTIONS_SENDMAIL, OnActionsSendMail)
 		COMMAND_ID_HANDLER(ID_ACTIONS_BACK, OnActionsBack)
 		COMMAND_ID_HANDLER(ID_ACTIONS_FORWARD, OnActionsForward)
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
@@ -990,10 +997,12 @@ public:
 	{
 		CPoint pt(lParam);
 		CPoint npt(-1, -1);
-		CRect rc;
-		m_treeView.GetWindowRect(&rc);
+		CRect trc;
+		CRect lrc;
+		m_treeView.GetWindowRect(&trc);
+		m_listView.GetWindowRect(&lrc);
 
-		if((pt == npt && (m_treeView.m_hWnd == ::GetFocus() || ::IsChild(m_treeView.m_hWnd, ::GetFocus()))) || rc.PtInRect(pt))
+		if((pt == npt && (m_treeView.m_hWnd == ::GetFocus() || ::IsChild(m_treeView.m_hWnd, ::GetFocus()))) || trc.PtInRect(pt))
 		{
 			if(pt == npt)
 			{
@@ -1007,7 +1016,7 @@ public:
 				}
 				else
 				{
-					pt = rc.TopLeft();
+					pt = trc.TopLeft();
 				}
 
 				m_treeView.ClientToScreen(&pt);
@@ -1022,24 +1031,35 @@ public:
 			popup.TrackPopupMenu(TPM_LEFTALIGN, pt.x, pt.y, m_hWnd);
 			menu.DestroyMenu();
 		}
-
-		/*
-		m_listView.GetWindowRect(&rc);
-
-		if(rc.PtInRect(pt))
+		else if((pt == npt && (m_listView.m_hWnd == ::GetFocus() || ::IsChild(m_listView.m_hWnd, ::GetFocus()))) || lrc.PtInRect(pt))
 		{
+			if(pt == npt)
+			{
+				CRect r;
+				int i = m_listView.GetSelectedIndex();
+
+				if(i >= 0)
+				{
+					m_listView.GetItemRect(i, &r, TRUE);
+					pt = r.TopLeft();
+				}
+				else
+				{
+					pt = lrc.TopLeft();
+				}
+
+				m_listView.ClientToScreen(&pt);
+			}
+
 			CMenu menu;
 			if(!menu.LoadMenu(IDR_LIST_POPUP))
 				return 0;
 			CMenuHandle popup(menu.GetSubMenu(0));
 			PrepareMenu(popup);
-			CPoint pos;
-			GetCursorPos(&pos);
 			SetForegroundWindow(m_hWnd);
-			popup.TrackPopupMenu(TPM_LEFTALIGN, pos.x, pos.y, m_hWnd);
+			popup.TrackPopupMenu(TPM_LEFTALIGN, pt.x, pt.y, m_hWnd);
 			menu.DestroyMenu();
 		}
-		*/
 
 		return 0;
 	}
@@ -1608,6 +1628,37 @@ public:
 					m_treeView.SetItemText(i, feeddata->m_title);
 					m_treeView.SortChildren(m_feedsRoot, TRUE);
 				}
+			}
+		}
+
+		return 0;
+	}
+
+	LRESULT OnActionsSendMail(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		int idx = m_listView.GetSelectedIndex();
+		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+		if(newsdata != NULL)
+		{
+			MapiMessage mm;
+			::ZeroMemory(&mm, sizeof(MapiMessage));
+			CAtlString note;
+			note.Format("%s\n\n%s\n\nSent by FeedIt!", newsdata->m_description, newsdata->m_url);
+			mm.lpszSubject = newsdata->m_title.GetBuffer();
+			mm.lpszNoteText = note.GetBuffer();
+			const HINSTANCE hMAPILib = ::LoadLibrary("MAPI32.DLL");
+
+			if(hMAPILib)
+			{
+				LPMAPISENDMAIL lpMAPISendMail = (LPMAPISENDMAIL)GetProcAddress(hMAPILib, "MAPISendMail");
+
+				if(lpMAPISendMail != NULL)
+				{
+					lpMAPISendMail(NULL, (ULONG_PTR)m_hWnd, &mm, MAPI_LOGON_UI | MAPI_DIALOG, 0);
+				}
+
+				::FreeLibrary(hMAPILib);
 			}
 		}
 

@@ -13,10 +13,11 @@
 #define IDB_LIST_IMAGELIST              204
 #define IDR_TRAY_POPUP                  205
 #define IDR_TREE_POPUP                  207
+#define IDR_TREE_POPUP1                 208
+#define IDR_LIST_POPUP                  208
 #define IDC_PROMPT                      1000
 #define IDC_STRING                      1001
 #define IDC_VALUE                       1002
-#define IDC_FEED_NAME                   1003
 #define IDC_FEED_TITLE                  1003
 #define IDC_FEED_URL                    1004
 #define IDC_FEED_UPDATE                 1009
@@ -32,13 +33,14 @@
 #define ID_ACTIONS_BACK                 32784
 #define ID_ACTIONS_FORWARD              32785
 #define ID_VIEW_PROPERTIES              32789
+#define ID_ACTIONS_SENDMAIL             32794
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        209
-#define _APS_NEXT_COMMAND_VALUE         32794
+#define _APS_NEXT_COMMAND_VALUE         32798
 #define _APS_NEXT_CONTROL_VALUE         1012
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

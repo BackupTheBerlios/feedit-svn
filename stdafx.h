@@ -31,6 +31,7 @@ extern CAppModule _Module;
 #include <atlcomtime.h>
 #include <exdispid.h>
 #include <shlobj.h>
+#include <mapi.h>
 
 #import "C:\WINDOWS\System32\SHDOCVW.DLL" named_guids
 #import "C:\WINDOWS\System32\MSXML3.DLL"

@@ -62,6 +62,7 @@ BEGIN
     BUTTON      ID_VIEW_PROPERTIES
     SEPARATOR
     BUTTON      ID_ACTIONS_MARKREAD
+    BUTTON      ID_ACTIONS_SENDMAIL
     SEPARATOR
     BUTTON      ID_ACTIONS_BACK
     BUTTON      ID_ACTIONS_FORWARD
@@ -96,6 +97,7 @@ BEGIN
     POPUP "&Actions"
     BEGIN
         MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKREAD
+        MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
         MENUITEM SEPARATOR
         MENUITEM "&Back",                       ID_ACTIONS_BACK
         MENUITEM "&Forward",                    ID_ACTIONS_FORWARD
@@ -130,6 +132,14 @@ BEGIN
         MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
         MENUITEM SEPARATOR
         MENUITEM "&Delete\tDel",                ID_FILE_DELETE
+    END
+END
+
+IDR_LIST_POPUP MENU 
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
     END
 END
 
@@ -251,6 +261,7 @@ BEGIN
     VK_TAB,         ID_NEXT_PANE,           VIRTKEY, NOINVERT
     VK_TAB,         ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
     "P",            ID_VIEW_PROPERTIES,     VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_ACTIONS_SENDMAIL,    VIRTKEY, CONTROL, NOINVERT
 END
 
 
@@ -398,6 +409,7 @@ END
 STRINGTABLE 
 BEGIN
     ID_VIEW_PROPERTIES      "Edit item properties\nProperties"
+    ID_ACTIONS_SENDMAIL     "Send item by email\nSend by email"
 END
 
 #endif    // English (U.S.) resources

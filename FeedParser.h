@@ -148,6 +148,10 @@ public:
 						CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("link"));
 						CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
 						CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("date"));
+
+						if(datenode == NULL)
+							datenode = node->selectSingleNode(_bstr_t("pubDate"));
+
 						FeedItem item;
 
 						if(titlenode != NULL)

@@ -455,6 +455,7 @@ public:
 		try
 		{
 			COleDateTime dt;
+			dt.SetStatus(COleDateTime::invalid);
 			CAtlString t1((const char*)item.m_date);
 
 			if(t1.Mid(4, 1) == "-" && t1.Mid(7, 1) == "-")
@@ -467,10 +468,65 @@ public:
 				if(t1.Mid(19, 1) == "-")
 					dt += COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
 			}
-			else
+			else if(t1.Mid(3, 1) == "," && t1.Mid(4, 1) == " ")
 			{
-				dt = COleDateTime::GetCurrentTime();
+				int pos = 0;
+				CAtlString tok = t1.Tokenize(" ,:", pos);
+				int dbuf[6] = { 0 };
+				int dpos = 0;
+
+				while(tok != "" && dpos < 6)
+				{
+					int v = atoi(tok);
+
+					if(v == 0)
+					{
+						if(tok == "Jan")
+							v = 1;
+						else if(tok == "Feb")
+							v = 2;
+						else if(tok == "Mar")
+							v = 3;
+						else if(tok == "Apr")
+							v = 4;
+						else if(tok == "May")
+							v = 5;
+						else if(tok == "Jun")
+							v = 6;
+						else if(tok == "Jul")
+							v = 7;
+						else if(tok == "Aug")
+							v = 8;
+						else if(tok == "Sep")
+							v = 9;
+						else if(tok == "Oct")
+							v = 10;
+						else if(tok == "Nov")
+							v = 11;
+						else if(tok == "Dec")
+							v = 12;
+					}
+
+					if(v > 0)
+						dbuf[dpos++] = v;
+
+					tok = t1.Tokenize(" ,:", pos);
+				}
+
+				dt.SetDateTime(dbuf[2], dbuf[1], dbuf[0], dbuf[3], dbuf[4], dbuf[5]);
+
+				if(tok.Left(4) == "GMT+")
+				{
+					dt -= COleDateTimeSpan(0, atoi(tok.Mid(4)), 0, 0);
+				}
+				else if(tok.Left(4) == "GMT-")
+				{
+					dt += COleDateTimeSpan(0, atoi(tok.Mid(4)), 0, 0);
+				}
 			}
+
+			if(dt.GetStatus() == COleDateTime::invalid)
+				dt = COleDateTime::GetCurrentTime();
 
 			CAtlString t2 = dt.Format("%Y/%m/%d %H:%M:%S");
 

@@ -1173,31 +1173,36 @@ public:
 
 	LRESULT OnActionsMarkRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
+		HTREEITEM i = m_treeView.GetSelectedItem();
+
+		if(i != NULL)
 		{
-			NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+			FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 
-			if(newsdata != NULL && newsdata->m_unread)
+			for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
 			{
-				CComPtr<ADODB::_Command> command;
-				command.CoCreateInstance(CComBSTR("ADODB.Command"));
-				ATLASSERT(command != NULL);
-				command->ActiveConnection = m_connection;
-				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
-				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
-				newsdata->m_unread = false;
-				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
-				HTREEITEM i = m_treeView.GetSelectedItem();
-				FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
-				feeddata->m_unread--;
-				CAtlString txt;
-				m_treeView.GetItemText(i, txt);
-				m_treeView.SetItemText(i, txt);
-			}
-		}
+				NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
 
-		m_listView.Invalidate();
+				if(newsdata != NULL && newsdata->m_unread)
+				{
+					CComPtr<ADODB::_Command> command;
+					command.CoCreateInstance(CComBSTR("ADODB.Command"));
+					ATLASSERT(command != NULL);
+					command->ActiveConnection = m_connection;
+					command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
+					CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+					newsdata->m_unread = false;
+					m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
+					feeddata->m_unread--;
+				}
+			}
+
+			CAtlString txt;
+			m_treeView.GetItemText(i, txt);
+			m_treeView.SetItemText(i, txt);
+			m_listView.Invalidate();
+		}
 
 		return 0;
 	}

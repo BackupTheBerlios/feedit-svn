@@ -31,6 +31,6 @@ extern CAppModule _Module;
 #include <shlobj.h>
 
 #import "C:\WINDOWS\System32\SHDOCVW.DLL" named_guids
-#import "C:\WINDOWS\System32\MSXML2.DLL"
+#import "C:\WINDOWS\System32\MSXML3.DLL"
 #import "C:\Program Files\Common Files\System\ADO\MSADO25.TLB" rename("EOF","EndOfFile")
 #import "C:\Program Files\Common Files\System\ADO\MSADOX.DLL"

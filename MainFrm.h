@@ -96,7 +96,7 @@ public:
 
 	BEGIN_MSG_MAP(CMainFrame)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
-		MESSAGE_HANDLER(WM_CLOSE, OnClose)
+		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER(WM_SIZE, OnSize)
 		MESSAGE_HANDLER(WM_MOUSEMOVE, OnMouseMove)
 		MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonUp)
@@ -384,6 +384,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 
 		// create the vertical splitter
 		m_vSplit.Create(m_hWnd, rcVert, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+		m_vSplit.SetSplitterExtendedStyle(0);
 
 		// client rect for horizontal splitter
 		CRect rcHorz;
@@ -391,6 +392,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 
 		// create the horizontal splitter. Note that vSplit is parent of hSplit
 		m_hSplit.Create(m_vSplit.m_hWnd, rcHorz, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+		m_hSplit.SetSplitterExtendedStyle(0);
 
 		// add the horizontal splitter to the right pane (1) of vertical splitter
 		m_vSplit.SetSplitterPane(1, m_hSplit);
@@ -522,71 +524,47 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 		HICON hIconSmall = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
 		InstallIcon(_T("FeedIt"), hIconSmall, IDR_TRAY_POPUP);
 
-		CRegKey rk;
+		CReBarSettings rs;
+		CReBarCtrl rbc = m_hWndToolBar;
 
-		if(rk.Open(HKEY_CURRENT_USER, "Software\\FeedIt") == ERROR_SUCCESS)
-		{
-			WINDOWPLACEMENT plc;
-			plc.length = sizeof(WINDOWPLACEMENT);
-			GetWindowPlacement(&plc);
-			ULONG s = sizeof(UINT);
+		if(rs.Load("Software\\FeedIt", "ReBar"))
+			rs.ApplyTo(rbc);
 
-			if(rk.QueryBinaryValue("WindowCmd", &plc.showCmd, &s) == ERROR_SUCCESS && s == sizeof(UINT))
-			{
-				if(plc.showCmd == SW_SHOWNORMAL)
-				{
-					s = sizeof(RECT);
+		CSplitterSettings ss1;
 
-					if(rk.QueryBinaryValue("WindowPos", &plc.rcNormalPosition, &s) == ERROR_SUCCESS && s == sizeof(RECT))
-					{
-						SetWindowPlacement(&plc);
-					}
+		if(ss1.Load("Software\\FeedIt", "HSplit"))
+			ss1.ApplyTo(m_hSplit);
 
-					int i;
-					s = sizeof(int);
+		CSplitterSettings ss2;
 
-					if(rk.QueryBinaryValue("HSplitPos", &i, &s) == ERROR_SUCCESS && s == sizeof(int))
-					{
-						m_hSplit.SetSplitterPos(i);
-					}
-
-					s = sizeof(int);
-
-					if(rk.QueryBinaryValue("VSplitPos", &i, &s) == ERROR_SUCCESS && s == sizeof(int))
-					{
-						m_vSplit.SetSplitterPos(i);
-					}
-				}
-			}
-
-		}
+		if(ss2.Load("Software\\FeedIt", "VSplit"))
+			ss2.ApplyTo(m_vSplit);
 
 		return 0;
 	}
 
-	LRESULT OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 	{
-		CRegKey rk;
-
-		if(rk.Create(HKEY_CURRENT_USER, "Software\\FeedIt") == ERROR_SUCCESS)
-		{
-			WINDOWPLACEMENT plc;
-			plc.length = sizeof(WINDOWPLACEMENT);
-			GetWindowPlacement(&plc);
-
-			if(plc.showCmd == SW_SHOWNORMAL)
-			{
-				int hsplitpos = m_hSplit.GetSplitterPos();
-				int vsplitpos = m_hSplit.GetSplitterPos();
-				rk.SetBinaryValue("WindowCmd", &plc.showCmd, sizeof(UINT));
-				rk.SetBinaryValue("WindowPos", &plc.rcNormalPosition, sizeof(RECT));
-				rk.SetBinaryValue("HSplitPos", &hsplitpos, sizeof(int));
-				rk.SetBinaryValue("VSplitPos", &vsplitpos, sizeof(int));
-			}
-		}
-
 		bHandled = FALSE;
 		m_updateThread.Shutdown();
+
+		CWindowSettings ws;
+		ws.GetFrom(*this);
+		ws.Save("Software\\FeedIt", "MainFrame");
+
+		CReBarSettings rs;
+		CReBarCtrl rbc = m_hWndToolBar;
+		rs.GetFrom(rbc);
+		rs.Save("Software\\FeedIt", "ReBar");
+
+		CSplitterSettings ss1;
+		ss1.GetFrom(m_hSplit);
+		ss1.Save("Software\\FeedIt", "HSplit");
+
+		CSplitterSettings ss2;
+		ss2.GetFrom(m_vSplit);
+		ss2.Save("Software\\FeedIt", "VSplit");
+
 		return 0;
 	}
 

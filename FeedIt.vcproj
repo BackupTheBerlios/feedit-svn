@@ -171,6 +171,9 @@
 				RelativePath=".\resource.h">
 			</File>
 			<File
+				RelativePath=".\Settings.h">
+			</File>
+			<File
 				RelativePath=".\stdafx.h">
 			</File>
 			<File

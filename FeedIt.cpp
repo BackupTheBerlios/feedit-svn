@@ -15,6 +15,7 @@
 #include "StringDlg.h"
 #include "CustomListView.h"
 #include "TrayIcon.h"
+#include "Settings.h"
 #include "MainFrm.h"
 
 CAppModule _Module;
@@ -32,7 +33,12 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 		return 0;
 	}
 
-	wndMain.ShowWindow(nCmdShow);
+	CWindowSettings ws;
+
+	if(ws.Load("Software\\FeedIt", "MainFrame"))
+		ws.ApplyTo(wndMain, nCmdShow);
+	else
+		wndMain.ShowWindow(nCmdShow);
 
 	int nRet = theLoop.Run();
 

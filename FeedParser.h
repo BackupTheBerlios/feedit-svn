@@ -102,9 +102,9 @@ public:
 		{
 			m_type = FPFT_ATOM;
 			MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("atom:title"));
-			MSXML2::IXMLDOMNodePtr linknode = xmldocument->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
-			MSXML2::IXMLDOMNodePtr imagenode = xmldocument->selectSingleNode(_bstr_t("atom:image/atom:link[@rel=\"alternate\"]/@href"));
-			MSXML2::IXMLDOMNodePtr descriptionnode = xmldocument->selectSingleNode(_bstr_t("atom:tagline"));
+			MSXML2::IXMLDOMNodePtr linknode = node->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
+			MSXML2::IXMLDOMNodePtr imagenode = node->selectSingleNode(_bstr_t("atom:image/atom:link[@rel=\"alternate\"]/@href"));
+			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("atom:tagline"));
 
 			if(titlenode != NULL)
 				m_title = (LPTSTR)titlenode->text;
@@ -233,7 +233,6 @@ public:
 
 				if(nodes != NULL && nodes->length > 0)
 				{
-					MSXML2::IXMLDOMNodePtr baseurlnode = xmldocument->selectSingleNode(_bstr_t("/atom:feed/atom:link[@rel=\"alternate\"]/@href"));
 					MSXML2::IXMLDOMNodePtr node;
 
 					while((node = nodes->nextNode()) != NULL)
@@ -248,12 +247,7 @@ public:
 							item.m_title = (LPTSTR)titlenode->text;
 
 						if(urlnode != NULL)
-						{
-							TCHAR buf[1024];
-							DWORD buflen = 1024;
-							AtlCombineUrl(baseurlnode->text, urlnode->text, buf, &buflen, ATL_URL_NO_ENCODE);
-							item.m_url = buf;
-						}
+							item.m_url = (LPTSTR)urlnode->text;
 
 						if(descriptionnode != NULL)
 							item.m_description = (LPTSTR)descriptionnode->text;

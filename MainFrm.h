@@ -81,6 +81,7 @@ public:
 			connection->Execute(_bstr_t("INSERT INTO Folders (Name) VALUES ('Sample feeds')"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) UNIQUE NOT NULL, LastError VARCHAR(255) NOT NULL DEFAULT '', Link VARCHAR(255) NOT NULL DEFAULT '', ImageLink VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (0, 'FeedIt development blog', 'http://feedit.blogspot.com/atom.xml', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
@@ -1682,8 +1683,8 @@ public:
 			recordset->Fields->GetItem("Title")->Value = _bstr_t(title);
 			recordset->Fields->GetItem("URL")->Value = _bstr_t(url);
 			recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
-			recordset->Fields->GetItem("RefreshInterval")->Value = 60;
-			recordset->Fields->GetItem("MaxAge")->Value = 0;
+			recordset->Fields->GetItem("RefreshInterval")->Value = -1;
+			recordset->Fields->GetItem("MaxAge")->Value = -1;
 			recordset->Fields->GetItem("NavigateURL")->Value = _bstr_t("0");
 			recordset->Update();
 			id = recordset->Fields->GetItem("ID")->Value;

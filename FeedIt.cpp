@@ -20,6 +20,27 @@ CAppModule _Module;
 
 int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 {
+	ATL::CString mutexName;
+
+	{
+		TCHAR buf[1024];
+		ULONG buflen = 1024;
+		::GetUserName(buf, &buflen);
+		mutexName += buf;
+		mutexName += "@";
+		buflen = 1024;
+		::GetComputerName(buf, &buflen);
+		mutexName += buf;
+	}
+
+	HANDLE hMutex = ::CreateMutex(NULL, FALSE, mutexName);
+
+	if(::GetLastError() == ERROR_ALREADY_EXISTS)
+	{
+		::CloseHandle(hMutex);
+		return 0;
+	}
+
 	CMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
 
@@ -28,6 +49,7 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	if(wndMain.CreateEx() == NULL)
 	{
 		ATLTRACE(_T("Main window creation failed!\n"));
+		::CloseHandle(hMutex);
 		return 0;
 	}
 
@@ -36,6 +58,7 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	int nRet = theLoop.Run();
 
 	_Module.RemoveMessageLoop();
+	::CloseHandle(hMutex);
 	return nRet;
 }
 

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#define DBPATH "E:\\FeedIt.mdb"
-
 class CMainFrame : public CFrameWindowImpl<CMainFrame>,
 	public CUpdateUI<CMainFrame>,
 	public CMessageFilter,
@@ -18,6 +16,7 @@ class CMainFrame : public CFrameWindowImpl<CMainFrame>,
 public:
 	DECLARE_FRAME_WND_CLASS(NULL, IDR_MAINFRAME)
 
+	TCHAR m_dbPath[MAX_PATH];
 	CCommandBarCtrl m_CmdBar;
 	CMultiPaneStatusBarCtrl m_statusBar;
 	CProgressBarCtrl m_progressBar;
@@ -42,14 +41,24 @@ public:
 	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_feedsRoot(NULL), m_itemDrag(NULL), m_itemDrop(NULL),
 		m_arrowCursor(LoadCursor(NULL, IDC_ARROW)), m_noCursor(LoadCursor(NULL, IDC_NO))
 	{
-		if(::GetFileAttributes(DBPATH) == INVALID_FILE_ATTRIBUTES)
+		::SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, m_dbPath);
+		::PathAppend(m_dbPath, "FeedIt");
+
+		if(::GetFileAttributes(m_dbPath) == INVALID_FILE_ATTRIBUTES)
+		{
+			::CreateDirectory(m_dbPath, NULL);
+		}
+
+		::PathAppend(m_dbPath, "FeedIt.mdb");
+
+		if(::GetFileAttributes(m_dbPath) == INVALID_FILE_ATTRIBUTES)
 		{
 			CComPtr<ADOX::_Catalog> catalog;
 			catalog.CoCreateInstance(CComBSTR("ADOX.Catalog"));
-			catalog->Create(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH));
+			catalog->Create(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath);
 			CComPtr<ADODB::_Connection> connection;
 			connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
-			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH), _bstr_t(), _bstr_t(), 0);
+			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
 			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
@@ -414,7 +423,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 		m_treeView.SetItemImage(m_feedsRoot, 1, 1);
 
 		m_connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
-		m_connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH), _bstr_t(), _bstr_t(), 0);
+		m_connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
 		CComPtr<ADODB::_Command> command;
 		command.CoCreateInstance(CComBSTR("ADODB.Command"));
 		command->ActiveConnection = m_connection;
@@ -694,7 +703,8 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 
 	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
 	{
-		int id = m_listView.GetItemData(m_listView.GetSelectedIndex());
+		int idx = m_listView.GetSelectedIndex();
+		int id = m_listView.GetItemData(idx);
 		CComPtr<ADODB::_Command> command;
 		command.CoCreateInstance(CComBSTR("ADODB.Command"));
 		command->ActiveConnection = m_connection;
@@ -707,6 +717,17 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 			recordset->MoveFirst();
 			_variant_t v;
 			m_htmlCtrl->Navigate2(&recordset->Fields->GetItem("URL")->Value, &v, &v, &v, &v);
+
+			if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("Y"))
+			{
+				CComPtr<ADODB::_Command> subcommand;
+				subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
+				subcommand->ActiveConnection = m_connection;
+				subcommand->CommandText = "UPDATE News SET Unread='N' WHERE ID=?";
+				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(id)));
+				CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
+			}
 		}
 
 		return 0;

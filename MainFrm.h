@@ -153,7 +153,19 @@ MSXML2::IXMLDOMDocument2Ptr LoadFeed(const char* url)
 
 ATL::CString SniffFeedName(MSXML2::IXMLDOMDocument2Ptr xmldocument)
 {
-	CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"));
+	CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rss/channel"));
+
+	if(node != NULL)
+	{
+		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
+
+		if(titlenode != NULL)
+			return ATL::CString(titlenode->text.GetBSTR());
+		else
+			return ATL::CString("(No name)");
+	}
+
+	node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"));
 
 	if(node != NULL)
 	{
@@ -187,7 +199,30 @@ void GetFeedNews(MSXML2::IXMLDOMDocument2Ptr xmldocument, int feedid)
 	recordset->CursorLocation = ADODB::adUseServer;
 	recordset->Open(_bstr_t("News"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 
-	CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss09:item"));
+	CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rss/channel/item"));
+
+	if(nodes != NULL && nodes->length > 0)
+	{
+		CComPtr<MSXML2::IXMLDOMNode> node;
+
+		while((node = nodes->nextNode()) != NULL)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
+			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("link"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
+
+			recordset->AddNew();
+			recordset->Fields->GetItem("FeedID")->Value = feedid;
+			recordset->Fields->GetItem("Title")->Value = titlenode->text;
+			recordset->Fields->GetItem("URL")->Value = urlnode->text;
+			recordset->Fields->GetItem("Description")->Value = descriptionnode->text;
+			recordset->Update();
+		}
+
+		return;
+	}
+
+	nodes = xmldocument->selectNodes(_bstr_t("/rdf:RDF/rss09:item"));
 
 	if(nodes != NULL && nodes->length > 0)
 	{

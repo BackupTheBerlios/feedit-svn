@@ -22,6 +22,7 @@ public:
 	BEGIN_DDX_MAP(CFeedPropertiesPage)
 		DDX_TEXT(IDC_FEED_NAME, m_name)
 		DDX_TEXT(IDC_FEED_URL, m_url)
+		DDX_INT_RANGE(IDC_FEED_UPDATE, m_update, 10, 1440)
 	END_DDX_MAP()
 
 	LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -37,6 +38,7 @@ public:
 
 	CAtlString m_name;
 	CAtlString m_url;
+	int m_update;
 };
 
 class CFeedPropertySheet :

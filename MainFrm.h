@@ -308,6 +308,7 @@ public:
 		MESSAGE_HANDLER(WM_SIZE, OnSize)
 		MESSAGE_HANDLER(WM_MOUSEMOVE, OnMouseMove)
 		MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonUp)
+		MESSAGE_HANDLER(WM_CONTEXTMENU, OnContextMenu)
 		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINDRAG, OnBeginDrag)
 		NOTIFY_HANDLER(IDC_TREE, TVN_SELCHANGED, OnTreeSelectionChanged)
 		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINLABELEDIT, OnTreeBeginLabelEdit)
@@ -325,6 +326,8 @@ public:
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
+		COMMAND_ID_HANDLER(ID_NEXT_PANE, OnNextPane)
+		COMMAND_ID_HANDLER(ID_PREV_PANE, OnPrevPane)
 		CHAIN_MSG_MAP_MEMBER(m_treeView)
 		CHAIN_MSG_MAP_MEMBER(m_listView)
 		CHAIN_MSG_MAP(CTrayIconImpl<CMainFrame>)
@@ -988,6 +991,64 @@ public:
 		return 0;
 	}
 
+	LRESULT OnContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+	{
+		CPoint pt(lParam);
+		CPoint npt(-1, -1);
+		CRect rc;
+		m_treeView.GetWindowRect(&rc);
+
+		if((pt == npt && (m_treeView.m_hWnd == ::GetFocus() || ::IsChild(m_treeView.m_hWnd, ::GetFocus()))) || rc.PtInRect(pt))
+		{
+			if(pt == npt)
+			{
+				CRect r;
+				HTREEITEM i = m_treeView.GetSelectedItem();
+
+				if(i != NULL)
+				{
+					m_treeView.GetItemRect(i, &r, TRUE);
+					pt = r.TopLeft();
+				}
+				else
+				{
+					pt = rc.TopLeft();
+				}
+
+				m_treeView.ClientToScreen(&pt);
+			}
+
+			CMenu menu;
+			if(!menu.LoadMenu(IDR_TREE_POPUP))
+				return 0;
+			CMenuHandle popup(menu.GetSubMenu(0));
+			PrepareMenu(popup);
+			SetForegroundWindow(m_hWnd);
+			popup.TrackPopupMenu(TPM_LEFTALIGN, pt.x, pt.y, m_hWnd);
+			menu.DestroyMenu();
+		}
+
+		/*
+		m_listView.GetWindowRect(&rc);
+
+		if(rc.PtInRect(pt))
+		{
+			CMenu menu;
+			if(!menu.LoadMenu(IDR_LIST_POPUP))
+				return 0;
+			CMenuHandle popup(menu.GetSubMenu(0));
+			PrepareMenu(popup);
+			CPoint pos;
+			GetCursorPos(&pos);
+			SetForegroundWindow(m_hWnd);
+			popup.TrackPopupMenu(TPM_LEFTALIGN, pos.x, pos.y, m_hWnd);
+			menu.DestroyMenu();
+		}
+		*/
+
+		return 0;
+	}
+
 	LRESULT OnBeginDrag(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	{
 		NM_TREEVIEW* pNMTreeView = (NM_TREEVIEW*)pnmh;
@@ -1537,6 +1598,7 @@ public:
 				CFeedPropertySheet sheet("Feed properties", 0);
 				sheet.m_propertiesPage.m_name = recordset->Fields->GetItem("Name")->Value;
 				sheet.m_propertiesPage.m_url = recordset->Fields->GetItem("URL")->Value;
+				sheet.m_propertiesPage.m_update = recordset->Fields->GetItem("RefreshInterval")->Value;
 
 				if(sheet.DoModal() == IDOK)
 				{
@@ -1544,9 +1606,10 @@ public:
 					subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
 					ATLASSERT(subcommand != NULL);
 					subcommand->ActiveConnection = m_connection;
-					subcommand->CommandText = "UPDATE Feeds SET Name=?, URL=? WHERE ID=?";
+					subcommand->CommandText = "UPDATE Feeds SET Name=?, URL=?, RefreshInterval=? WHERE ID=?";
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_name)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_url)));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_update)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
 					CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
 					feeddata->m_name = sheet.m_propertiesPage.m_name;
@@ -1632,6 +1695,48 @@ public:
 		return 0;
 	}
 
+	LRESULT OnNextPane(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		if(::GetFocus() == m_treeView.m_hWnd)
+		{
+			m_listView.SetActiveWindow();
+			m_listView.SetFocus();
+		}
+		else if(::GetFocus() == m_listView.m_hWnd)
+		{
+			m_htmlView.SetActiveWindow();
+			m_htmlView.SetFocus();
+		}
+		else
+		{
+			m_treeView.SetActiveWindow();
+			m_treeView.SetFocus();
+		}
+
+		return 0;
+	}
+
+	LRESULT OnPrevPane(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		if(::GetFocus() == m_treeView.m_hWnd)
+		{
+			m_htmlView.SetActiveWindow();
+			m_htmlView.SetFocus();
+		}
+		else if(::GetFocus() == m_listView.m_hWnd)
+		{
+			m_treeView.SetActiveWindow();
+			m_treeView.SetFocus();
+		}
+		else
+		{
+			m_listView.SetActiveWindow();
+			m_listView.SetFocus();
+		}
+
+		return 0;
+	}
+
 	HRESULT STDMETHODCALLTYPE ShowContextMenu(DWORD dwID, DWORD x, DWORD y, IUnknown *pcmdtReserved, IDispatch *pdispReserved, HRESULT *dwRetVal)
 	{
 		*dwRetVal = S_OK;
@@ -1681,7 +1786,10 @@ public:
 
 	HRESULT STDMETHODCALLTYPE TranslateAccelerator(DWORD_PTR hWnd, DWORD nMessage, DWORD_PTR wParam, DWORD_PTR lParam, BSTR bstrGuidCmdGroup, DWORD nCmdID, HRESULT *dwRetVal)
 	{
-		return E_NOTIMPL;
+		if(nMessage == WM_KEYDOWN && wParam == VK_TAB)
+			*dwRetVal = S_FALSE;
+
+		return S_OK;
 	}
 
 	HRESULT STDMETHODCALLTYPE GetOptionKeyPath(BSTR *pbstrKey, DWORD dw)

@@ -12,11 +12,14 @@
 #define IDB_TREE_IMAGELIST              203
 #define IDB_LIST_IMAGELIST              204
 #define IDR_TRAY_POPUP                  205
+#define IDR_TREE_POPUP                  207
 #define IDC_PROMPT                      1000
 #define IDC_STRING                      1001
 #define IDC_VALUE                       1002
 #define IDC_FEED_NAME                   1003
 #define IDC_FEED_URL                    1004
+#define IDC_FEED_UPDATE                 1007
+#define IDC_FEED_UPDATE_SPIN            1008
 #define ID_FILE_NEW_FEED                32772
 #define ID_FILE_NEW_FOLDER              32773
 #define ID_FILE_DELETE                  32774
@@ -30,9 +33,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        207
-#define _APS_NEXT_COMMAND_VALUE         32790
-#define _APS_NEXT_CONTROL_VALUE         1004
+#define _APS_NEXT_RESOURCE_VALUE        208
+#define _APS_NEXT_COMMAND_VALUE         32794
+#define _APS_NEXT_CONTROL_VALUE         1009
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -105,7 +105,7 @@ BEGIN
         MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
         MENUITEM SEPARATOR
-        MENUITEM "&Properties...",              ID_VIEW_PROPERTIES
+        MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
     END
     POPUP "&Help"
     BEGIN
@@ -120,6 +120,16 @@ BEGIN
         MENUITEM "&Show",                       ID_SHOW
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+END
+
+IDR_TREE_POPUP MENU 
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
+        MENUITEM SEPARATOR
+        MENUITEM "&Delete\tDel",                ID_FILE_DELETE
     END
 END
 
@@ -164,13 +174,20 @@ END
 
 IDD_FEED_PROPERTIES_PAGE DIALOGEX 0, 0, 210, 154
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
-CAPTION "Property Page"
+CAPTION "Feed"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     LTEXT           "Name:",IDC_STATIC,7,9,22,8
     EDITTEXT        IDC_FEED_NAME,43,7,160,12,ES_AUTOHSCROLL
     LTEXT           "URL:",IDC_STATIC,7,26,22,8
     EDITTEXT        IDC_FEED_URL,43,24,160,12,ES_AUTOHSCROLL
+    LTEXT           "Update every",IDC_STATIC,7,44,45,8
+    EDITTEXT        IDC_FEED_UPDATE,56,42,33,12,ES_RIGHT | ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "",IDC_FEED_UPDATE_SPIN,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS,78,42,11,12
+    LTEXT           "minutes",IDC_STATIC,93,44,26,8
 END
 
 
@@ -216,12 +233,13 @@ END
 
 IDR_MAINFRAME ACCELERATORS 
 BEGIN
+    "R",            ID_ACTIONS_MARKREAD,    VIRTKEY, CONTROL, NOINVERT
     VK_DELETE,      ID_FILE_DELETE,         VIRTKEY, NOINVERT
     "N",            ID_FILE_NEW_FEED,       VIRTKEY, CONTROL, NOINVERT
     "F",            ID_FILE_NEW_FOLDER,     VIRTKEY, CONTROL, NOINVERT
-    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
-    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
-    "R",            ID_ACTIONS_MARKREAD,    VIRTKEY, CONTROL, NOINVERT
+    VK_TAB,         ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_TAB,         ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    "P",            ID_VIEW_PROPERTIES,     VIRTKEY, CONTROL, NOINVERT
 END
 
 

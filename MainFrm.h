@@ -4,8 +4,10 @@
 
 #pragma once
 
-class CMainFrame : public CFrameWindowImpl<CMainFrame>,
+class CMainFrame :
+	public CFrameWindowImpl<CMainFrame>,
 	public CUpdateUI<CMainFrame>,
+	public CTrayIconImpl<CMainFrame>,
 	public CMessageFilter,
 	public CIdleHandler,
 	public IWorkerThreadClient,
@@ -101,6 +103,7 @@ public:
 		NOTIFY_HANDLER(IDC_TREE, TVN_BEGINDRAG, OnBeginDrag)
 		NOTIFY_HANDLER(IDC_TREE, TVN_SELCHANGED, OnTreeSelectionChanged)
 		NOTIFY_HANDLER(IDC_LIST, LVN_ITEMCHANGED, OnListSelectionChanged)
+		COMMAND_ID_HANDLER(ID_SHOW, OnShow)
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FEED, OnFileNewFeed)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
@@ -109,6 +112,7 @@ public:
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		CHAIN_MSG_MAP_MEMBER(m_listView)
+		CHAIN_MSG_MAP(CTrayIconImpl<CMainFrame>)
 		CHAIN_MSG_MAP(CUpdateUI<CMainFrame>)
 		CHAIN_MSG_MAP(CFrameWindowImpl<CMainFrame>)
 	END_MSG_MAP()
@@ -133,6 +137,7 @@ HRESULT CloseHandle(HANDLE hObject)
 
 HRESULT Execute(DWORD_PTR /*dwParam*/, HANDLE /*hObject*/)
 {
+	::CoInitialize(NULL);
 	CComPtr<ADODB::_Recordset> recordset;
 	recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
 	recordset->CursorLocation = ADODB::adUseServer;
@@ -164,6 +169,7 @@ HRESULT Execute(DWORD_PTR /*dwParam*/, HANDLE /*hObject*/)
 		}
 	}
 
+	::CoUninitialize();
 	return S_OK;
 }
 
@@ -513,26 +519,97 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 		m_updateThread.Initialize();
 		m_updateThread.AddTimer(10000, this, NULL, &m_hTimer);
 
+		HICON hIconSmall = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+		InstallIcon(_T("FeedIt"), hIconSmall, IDR_TRAY_POPUP);
+
+		CRegKey rk;
+
+		if(rk.Open(HKEY_CURRENT_USER, "Software\\FeedIt") == ERROR_SUCCESS)
+		{
+			WINDOWPLACEMENT plc;
+			plc.length = sizeof(WINDOWPLACEMENT);
+			GetWindowPlacement(&plc);
+			ULONG s = sizeof(UINT);
+
+			if(rk.QueryBinaryValue("WindowCmd", &plc.showCmd, &s) == ERROR_SUCCESS && s == sizeof(UINT))
+			{
+				if(plc.showCmd == SW_SHOWNORMAL)
+				{
+					s = sizeof(RECT);
+
+					if(rk.QueryBinaryValue("WindowPos", &plc.rcNormalPosition, &s) == ERROR_SUCCESS && s == sizeof(RECT))
+					{
+						SetWindowPlacement(&plc);
+					}
+
+					int i;
+					s = sizeof(int);
+
+					if(rk.QueryBinaryValue("HSplitPos", &i, &s) == ERROR_SUCCESS && s == sizeof(int))
+					{
+						m_hSplit.SetSplitterPos(i);
+					}
+
+					s = sizeof(int);
+
+					if(rk.QueryBinaryValue("VSplitPos", &i, &s) == ERROR_SUCCESS && s == sizeof(int))
+					{
+						m_vSplit.SetSplitterPos(i);
+					}
+				}
+			}
+
+		}
+
 		return 0;
 	}
 
 	LRESULT OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 	{
+		CRegKey rk;
+
+		if(rk.Create(HKEY_CURRENT_USER, "Software\\FeedIt") == ERROR_SUCCESS)
+		{
+			WINDOWPLACEMENT plc;
+			plc.length = sizeof(WINDOWPLACEMENT);
+			GetWindowPlacement(&plc);
+
+			if(plc.showCmd == SW_SHOWNORMAL)
+			{
+				int hsplitpos = m_hSplit.GetSplitterPos();
+				int vsplitpos = m_hSplit.GetSplitterPos();
+				rk.SetBinaryValue("WindowCmd", &plc.showCmd, sizeof(UINT));
+				rk.SetBinaryValue("WindowPos", &plc.rcNormalPosition, sizeof(RECT));
+				rk.SetBinaryValue("HSplitPos", &hsplitpos, sizeof(int));
+				rk.SetBinaryValue("VSplitPos", &vsplitpos, sizeof(int));
+			}
+		}
+
 		bHandled = FALSE;
 		m_updateThread.Shutdown();
 		return 0;
 	}
 
-	LRESULT OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+	LRESULT OnSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
-		if(::IsWindow(m_statusBar.m_hWnd))
+		if(wParam == SIZE_MINIMIZED)
 		{
-			UpdateLayout();
-			CRect rcProgress;
-			m_statusBar.GetPaneRect(IDR_PROGRESS, &rcProgress);
-			::InflateRect(&rcProgress, 6, -2);
-			::OffsetRect(&rcProgress, 6, 0);
-			m_progressBar.MoveWindow(rcProgress);
+			ShowWindow(SW_HIDE);
+			LONG_PTR exstyle = GetWindowLongPtr(GWL_EXSTYLE);
+			exstyle |= WS_EX_TOOLWINDOW;
+			SetWindowLongPtr(GWL_EXSTYLE, exstyle);
+		}
+		else
+		{
+			if(::IsWindow(m_statusBar.m_hWnd))
+			{
+				UpdateLayout();
+				CRect rcProgress;
+				m_statusBar.GetPaneRect(IDR_PROGRESS, &rcProgress);
+				::InflateRect(&rcProgress, 6, -2);
+				::OffsetRect(&rcProgress, 6, 0);
+				m_progressBar.MoveWindow(rcProgress);
+			}
 		}
 
 		return 0;
@@ -728,6 +805,27 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 				CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
 				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
 			}
+		}
+
+		return 0;
+	}
+
+	LRESULT OnShow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		WINDOWPLACEMENT plc;
+		plc.length = sizeof(WINDOWPLACEMENT);
+		GetWindowPlacement(&plc);
+
+		if(plc.showCmd == SW_SHOWMINIMIZED)
+		{
+			LONG_PTR exstyle = GetWindowLongPtr(GWL_EXSTYLE);
+			exstyle &= ~WS_EX_TOOLWINDOW;
+			SetWindowLongPtr(GWL_EXSTYLE, exstyle);
+			ShowWindow(SW_RESTORE);
+		}
+		else
+		{
+			ShowWindow(SW_SHOW);
 		}
 
 		return 0;

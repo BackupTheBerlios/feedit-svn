@@ -82,7 +82,7 @@ BEGIN
         MENUITEM "&New Feed...\tCtrl+N",        ID_FILE_NEW_FEED
         MENUITEM "New &Folder...\tCtrl+F",      ID_FILE_NEW_FOLDER
         MENUITEM SEPARATOR
-        MENUITEM "Delete\tDel",                 ID_FILE_DELETE
+        MENUITEM "&Delete\tDel",                ID_FILE_DELETE
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_APP_EXIT
     END
@@ -94,6 +94,16 @@ BEGIN
     POPUP "&Help"
     BEGIN
         MENUITEM "&About FeedIt...",            ID_APP_ABOUT
+    END
+END
+
+IDR_TRAY_POPUP MENU 
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "&Show",                       ID_SHOW
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
     END
 END
 
@@ -316,6 +326,7 @@ BEGIN
     ID_FILE_NEW_FEED        "Add new feed\nNew feed"
     ID_FILE_NEW_FOLDER      "Add new folder\nNew folder"
     ID_FILE_DELETE          "Delete current item\nDelete"
+    ID_SHOW                 "Show application window\nShow"
 END
 
 #endif    // English (U.S.) resources

@@ -14,11 +14,33 @@
 #include "AboutDlg.h"
 #include "StringDlg.h"
 #include "CustomListView.h"
+#include "TrayIcon.h"
 #include "MainFrm.h"
 
 CAppModule _Module;
 
 int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
+{
+	CMessageLoop theLoop;
+	_Module.AddMessageLoop(&theLoop);
+
+	CComObjectGlobal<CMainFrame> wndMain;
+
+	if(wndMain.CreateEx() == NULL)
+	{
+		ATLTRACE(_T("Main window creation failed!\n"));
+		return 0;
+	}
+
+	wndMain.ShowWindow(nCmdShow);
+
+	int nRet = theLoop.Run();
+
+	_Module.RemoveMessageLoop();
+	return nRet;
+}
+
+int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	ATL::CString mutexName;
 
@@ -41,29 +63,6 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 		return 0;
 	}
 
-	CMessageLoop theLoop;
-	_Module.AddMessageLoop(&theLoop);
-
-	CComObjectGlobal<CMainFrame> wndMain;
-
-	if(wndMain.CreateEx() == NULL)
-	{
-		ATLTRACE(_T("Main window creation failed!\n"));
-		::CloseHandle(hMutex);
-		return 0;
-	}
-
-	wndMain.ShowWindow(nCmdShow);
-
-	int nRet = theLoop.Run();
-
-	_Module.RemoveMessageLoop();
-	::CloseHandle(hMutex);
-	return nRet;
-}
-
-int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
-{
 	HRESULT hRes = ::CoInitialize(NULL);
 // If you are running on NT 4.0 or higher you can use the following call instead to 
 // make the EXE free threaded. This means that calls come in on a random RPC thread.
@@ -84,6 +83,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	_Module.Term();
 	::CoUninitialize();
-
+	::CloseHandle(hMutex);
 	return nRet;
 }

@@ -176,6 +176,9 @@
 			<File
 				RelativePath=".\StringDlg.h">
 			</File>
+			<File
+				RelativePath=".\TrayIcon.h">
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

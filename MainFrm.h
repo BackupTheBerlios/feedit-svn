@@ -68,9 +68,20 @@ public:
 			connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
 			ATLASSERT(connection != NULL);
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
-			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
-			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
-			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
+			CComPtr<ADODB::_Recordset> recordset;
+			recordset = connection->Execute(_bstr_t("CREATE TABLE Configuration (Name VARCHAR(255) UNIQUE NOT NULL, CurrentValue VARCHAR(255) NOT NULL)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DBSchemaVersion', '1')"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultRefreshInterval', '60')"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultMaxAge', '30')"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Folders (Name) VALUES ('Sample feeds')"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Name, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Name, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Name, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE INDEX NewsI1 ON News (FeedID)"), NULL, 0);
 		}
 	}
 

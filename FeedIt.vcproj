@@ -183,6 +183,9 @@
 				RelativePath=".\resource.h">
 			</File>
 			<File
+				RelativePath=".\SearchBand.h">
+			</File>
+			<File
 				RelativePath=".\Settings.h">
 			</File>
 			<File

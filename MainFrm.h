@@ -22,6 +22,7 @@ public:
 
 	TCHAR m_dbPath[MAX_PATH];
 	CCommandBarCtrl m_CmdBar;
+	CSearchBand m_SrcBar;
 	CMultiPaneStatusBarCtrl m_statusBar;
 	CProgressBarCtrl m_progressBar;
 	CSplitterWindow m_vSplit;
@@ -87,7 +88,7 @@ public:
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
 	{
-		if(m_htmlView.IsChild(pMsg->hwnd))
+		if(::IsWindow(m_htmlView.m_hWnd) && (pMsg->hwnd == m_htmlView.m_hWnd || m_htmlView.IsChild(pMsg->hwnd)))
 		{
 			CComPtr<IOleInPlaceActiveObject> pIOAO;
 			m_htmlView.QueryControl(&pIOAO);
@@ -96,6 +97,9 @@ public:
 			if(pIOAO->TranslateAccelerator(pMsg) == S_OK)
 				return TRUE;
 		}
+
+		if(::IsWindow(m_SrcBar.m_hWnd) && m_SrcBar.IsDialogMessage(pMsg))
+			return TRUE;
 
 		if(CFrameWindowImpl<CMainFrame>::PreTranslateMessage(pMsg))
 			return TRUE;
@@ -405,6 +409,7 @@ public:
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(ID_NEXT_PANE, OnNextPane)
 		COMMAND_ID_HANDLER(ID_PREV_PANE, OnPrevPane)
+		CHAIN_MSG_MAP_MEMBER(m_SrcBar)
 		CHAIN_MSG_MAP_MEMBER(m_treeView)
 		CHAIN_MSG_MAP_MEMBER(m_listView)
 		CHAIN_MSG_MAP(CTrayIconImpl<CMainFrame>)
@@ -708,9 +713,12 @@ public:
 
 		HWND hWndToolBar = CreateSimpleToolBarCtrl(m_hWnd, IDR_MAINFRAME, FALSE, ATL_SIMPLE_TOOLBAR_PANE_STYLE);
 
+		HWND hWndSrcBar = m_SrcBar.Create(m_hWnd);
+
 		CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 		AddSimpleReBarBand(hWndCmdBar);
-		AddSimpleReBarBand(hWndToolBar, NULL, TRUE);
+		AddSimpleReBarBand(hWndToolBar, NULL, TRUE, 0, TRUE);
+		AddSimpleReBarBand(hWndSrcBar, "Search", FALSE, 0, TRUE);
 
 		CreateSimpleStatusBar();
 		m_statusBar.SubclassWindow(m_hWndStatusBar);
@@ -911,6 +919,7 @@ public:
 	{
 		bHandled = FALSE;
 		m_updateThread.Shutdown();
+		DispEventUnadvise(m_htmlCtrl);
 
 		CWindowSettings ws;
 		ws.GetFrom(*this);
@@ -1985,23 +1994,23 @@ public:
 
 	LRESULT OnNextPane(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		if(::GetFocus() == m_treeView.m_hWnd)
+		HWND focus = ::GetFocus();
+
+		if(focus == m_SrcBar.m_hWnd || m_SrcBar.IsChild(focus))
+		{
+			m_treeView.SetFocus();
+		}
+		else if(focus == m_treeView.m_hWnd || m_treeView.IsChild(focus))
 		{
 			m_listView.SetFocus();
 		}
-		else if(::GetFocus() == m_listView.m_hWnd)
+		else if(focus == m_listView.m_hWnd || m_listView.IsChild(focus))
 		{
 			m_htmlView.SetFocus();
-			CComPtr<IOleObject> pIOO;
-			m_htmlView.QueryControl(&pIOO);
-			ATLASSERT(pIOO != NULL);
-			CRect rc;
-			m_htmlView.GetClientRect(&rc);
-			pIOO->DoVerb(OLEIVERB_UIACTIVATE, (LPMSG)GetCurrentMessage(), NULL, 0, this->m_hWnd, &rc);
 		}
 		else
 		{
-			m_treeView.SetFocus();
+			m_SrcBar.SetFocus();
 		}
 
 		return 0;
@@ -2009,17 +2018,17 @@ public:
 
 	LRESULT OnPrevPane(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		if(::GetFocus() == m_treeView.m_hWnd)
+		HWND focus = ::GetFocus();
+
+		if(focus == m_SrcBar.m_hWnd || m_SrcBar.IsChild(focus))
 		{
 			m_htmlView.SetFocus();
-			CComPtr<IOleObject> pIOO;
-			m_htmlView.QueryControl(&pIOO);
-			ATLASSERT(pIOO != NULL);
-			CRect rc;
-			m_htmlView.GetClientRect(&rc);
-			pIOO->DoVerb(OLEIVERB_UIACTIVATE, (LPMSG)GetCurrentMessage(), NULL, 0, this->m_hWnd, &rc);
 		}
-		else if(::GetFocus() == m_listView.m_hWnd)
+		else if(focus == m_treeView.m_hWnd || m_treeView.IsChild(focus))
+		{
+			m_SrcBar.SetFocus();
+		}
+		else if(focus == m_listView.m_hWnd || m_listView.IsChild(focus))
 		{
 			m_treeView.SetFocus();
 		}
@@ -2082,10 +2091,8 @@ public:
 	{
 		*dwRetVal = S_OK;
 
-		if((nMessage == WM_KEYDOWN || nMessage == WM_KEYUP) && (wParam == VK_TAB || wParam == VK_BACK))
-			*dwRetVal = S_FALSE;
-
-		if(wParam == VK_RETURN)
+		if(nMessage >= WM_KEYFIRST && nMessage <= WM_KEYLAST &&
+			(wParam == VK_TAB || wParam == VK_BACK || wParam == VK_RETURN || wParam == VK_UP || wParam == VK_DOWN || wParam == VK_LEFT || wParam == VK_RIGHT))
 			*dwRetVal = S_FALSE;
 
 		return S_OK;

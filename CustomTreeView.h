@@ -5,7 +5,7 @@ class CCustomTreeViewCtrl :
 	public CCustomDraw<CCustomTreeViewCtrl>
 {
 public:
-	BEGIN_MSG_MAP(CCustomTreeViewCtrl)    
+	BEGIN_MSG_MAP(CCustomTreeViewCtrl)
 		CHAIN_MSG_MAP(CCustomDraw<CCustomTreeViewCtrl>)
 	END_MSG_MAP()
 

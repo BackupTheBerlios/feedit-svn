@@ -20,6 +20,7 @@
 #include "Settings.h"
 #include "Options.h"
 #include "FeedProps.h"
+#include "SearchBand.h"
 #include "MainFrm.h"
 
 CAppModule _Module;

@@ -5,7 +5,7 @@ class CCustomListViewCtrl :
 	public CCustomDraw<CCustomListViewCtrl>
 {
 public:
-	BEGIN_MSG_MAP(CCustomListViewCtrl)    
+	BEGIN_MSG_MAP(CCustomListViewCtrl)
 		CHAIN_MSG_MAP(CCustomDraw<CCustomListViewCtrl>)
 	END_MSG_MAP()
 

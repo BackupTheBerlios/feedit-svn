@@ -75,12 +75,12 @@
 			IntermediateDirectory="Release"
 			ConfigurationType="1"
 			UseOfATL="2"
-			ATLMinimizesCRunTimeLibraryUsage="TRUE"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
 			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="WIN32;_WINDOWS;STRICT;NDEBUG"
-				ExceptionHandling="FALSE"
+				ExceptionHandling="TRUE"
 				RuntimeLibrary="0"
 				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="3"

@@ -181,6 +181,13 @@ public:
 		return ret;
 	}
 
+	void RestartTimer(int secs = REFRESH_INTERVAL)
+	{
+		LARGE_INTEGER liDueTime;
+		liDueTime.QuadPart = -10000 * (__int64)max(10, secs);
+		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+	}
+
 	void RefreshList()
 	{
 		HTREEITEM i = m_treeView.GetSelectedItem();
@@ -304,20 +311,14 @@ public:
 				CAtlString str;
 				str.Format("There are %d new items", m_newItems);
 				Notify(str, "FeedIt update");
-				RefreshTree();
-				RefreshList();
 				m_newItems = 0;
 			}
-			else
-			{
-				RefreshTree();
-			}
 
+			RefreshTree();
+			RefreshList();
 			m_mustRefresh = FALSE;
 			m_forceUpdate = FALSE;
-			LARGE_INTEGER liDueTime;
-			liDueTime.QuadPart = -10000 * (__int64) REFRESH_INTERVAL;
-			::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+			RestartTimer();
 		}
 
 		HTREEITEM i = m_treeView.GetSelectedItem();
@@ -370,8 +371,8 @@ public:
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_VIEW_PROPERTIES, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_SENDMAIL, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
-		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEUNREAD, UPDUI_MENUPOPUP)
-		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEUNREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_MARKALLREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_BACK, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_FORWARD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
@@ -471,6 +472,9 @@ public:
 
 					if(m_forceUpdate || t1+s1 < now)
 					{
+						CAtlString tmp;
+						tmp.Format("Checking for new items on %s...", (char*)(_bstr_t)recordset->Fields->GetItem("Title")->Value);
+						m_statusBar.SetPaneText(ID_DEFAULT_PANE, tmp);
 						int feedid = recordset->Fields->GetItem("ID")->Value;
 						_bstr_t url = recordset->Fields->GetItem("URL")->Value;
 						CFeedParser fp(url);
@@ -478,12 +482,32 @@ public:
 						for(size_t i = 0; i < fp.m_items.GetCount(); ++i)
 							AddNewsToFeed(feedid, fp.m_items[i]);
 
+						int retain = recordset->Fields->GetItem("MaxAge")->Value;
+
+						if(retain == -1)
+							retain = GetConfiguration("DefaultMaxAge", 30);
+
+						if(retain > 0)
+						{
+							COleDateTime age = now-COleDateTimeSpan(retain, 0, 0, 0);
+							ADODB::_CommandPtr command;
+							command.CreateInstance(__uuidof(ADODB::Command));
+							ATLASSERT(command != NULL);
+							command->ActiveConnection = m_connection;
+							command->CommandText = "DELETE FROM News WHERE FeedID=? AND Issued<?";
+							command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, recordset->Fields->GetItem("ID")->Value));
+							command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)age.Format("%Y/%m/%d %H:%M:%S")));
+							command->Execute(NULL, NULL, 0);
+						}
+
 						recordset->Fields->GetItem("LastError")->Value = (_bstr_t)fp.m_error;
 						recordset->Fields->GetItem("Link")->Value = (_bstr_t)fp.m_link;
 						recordset->Fields->GetItem("ImageLink")->Value = (_bstr_t)fp.m_image;
 						recordset->Fields->GetItem("Description")->Value = (_bstr_t)fp.m_description;
 						recordset->Fields->GetItem("LastUpdate")->Value = (_bstr_t)now.Format("%Y/%m/%d %H:%M:%S");
 						recordset->Update();
+
+						m_statusBar.SetPaneText(ID_DEFAULT_PANE, "");
 					}
 				}
 
@@ -931,9 +955,7 @@ public:
 		m_updateThread.Initialize();
 		m_hTimer = ::CreateWaitableTimer(NULL, FALSE, NULL);
 		m_updateThread.AddHandle(m_hTimer, this, NULL);
-		LARGE_INTEGER liDueTime;
-		liDueTime.QuadPart = -10000;
-		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+		RestartTimer(0);
 
 		m_treeView.SelectItem(m_feedsRoot);
 		return 0;
@@ -1685,9 +1707,7 @@ public:
 					m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
 					m_treeView.SortChildren(m_feedsRoot, TRUE);
 					m_treeView.Expand(m_feedsRoot);
-					LARGE_INTEGER liDueTime;
-					liDueTime.QuadPart = -10000 * 10;
-					::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+					RestartTimer(0);
 				}
 				else
 				{
@@ -1974,9 +1994,7 @@ public:
 					}
 				}
 
-				LARGE_INTEGER liDueTime;
-				liDueTime.QuadPart = -10000 * 10;
-				::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+				RestartTimer(0);
 			}
 		}
 
@@ -2223,9 +2241,7 @@ public:
 	LRESULT OnActionsUpdateFeeds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		m_forceUpdate = TRUE;
-		LARGE_INTEGER liDueTime;
-		liDueTime.QuadPart = -10000;
-		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+		RestartTimer(0);
 		return 0;
 	}
 

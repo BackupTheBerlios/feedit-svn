@@ -94,6 +94,16 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 //	HRESULT hRes = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	ATLASSERT(SUCCEEDED(hRes));
 
+	COleDateTime now = COleDateTime::GetCurrentTime();
+	COleDateTime limit(2004, 10, 1, 0, 0, 0);
+
+	if(now >= limit)
+	{
+		AtlMessageBox(NULL, "This preview version is time limited, and now is expired.\nPlease download a newer version.", "FeedIt is expired", MB_OK | MB_ICONERROR);
+		::CloseHandle(hMutex);
+		return 0;
+	}
+
 	// this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used
 	::DefWindowProc(NULL, 0, 0, 0L);
 

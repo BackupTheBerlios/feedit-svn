@@ -11,6 +11,7 @@
 #include "resource.h"
 
 #include "DataStructs.h"
+#include "FeedParser.h"
 #include "AboutDlg.h"
 #include "StringDlg.h"
 #include "CustomTreeView.h"

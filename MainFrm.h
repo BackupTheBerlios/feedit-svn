@@ -52,7 +52,7 @@ public:
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" DBPATH), _bstr_t(), _bstr_t(), 0);
 			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL)"), NULL, 0);
-			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
 		}
 	}
 
@@ -196,7 +196,7 @@ ATL::CString SniffFeedName(const _bstr_t& url)
 	xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
 	xmldocument->async = FALSE;
 	xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
-	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\""));
+	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
 	xmldocument->load(_variant_t(url));
 	CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rss/channel"));
 
@@ -237,10 +237,16 @@ ATL::CString SniffFeedName(const _bstr_t& url)
 	return ATL::CString("(Unknown feed type)");
 }
 
-void AddNewsToFeed(int feedid, const _bstr_t& title, const _bstr_t& url, const _bstr_t& description)
+void AddNewsToFeed(int feedid, const _bstr_t& title, const _bstr_t& url, const _bstr_t& description, const _bstr_t& date)
 {
 	try
 	{
+		ATL::CString t1((const char*)date);
+		ATL::CString t2;
+		t2 += t1.Mid(0, 10);
+		t2 += " ";
+		t2 += t1.Mid(11, 8);
+
 		CComPtr<ADODB::_Recordset> recordset;
 		recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
 		recordset->CursorLocation = ADODB::adUseServer;
@@ -250,6 +256,7 @@ void AddNewsToFeed(int feedid, const _bstr_t& title, const _bstr_t& url, const _
 		recordset->Fields->GetItem("Title")->Value = title;
 		recordset->Fields->GetItem("URL")->Value = url;
 		recordset->Fields->GetItem("Description")->Value = description;
+		recordset->Fields->GetItem("Issued")->Value = _bstr_t(t2);
 		recordset->Fields->GetItem("Unread")->Value = _bstr_t("Y");
 		recordset->Fields->GetItem("Flagged")->Value = _bstr_t("N");
 		recordset->Update();
@@ -265,7 +272,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 	xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
 	xmldocument->async = FALSE;
 	xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
-	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\""));
+	xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
 	xmldocument->load(_variant_t(url));
 
 	CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rss/channel/item"));
@@ -279,7 +286,8 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
 			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("link"));
 			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
-			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text);
+			CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("date"));
+			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
 		}
 
 		return;
@@ -296,7 +304,8 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
 			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss09:link"));
 			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
-			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text);
+			CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
+			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
 		}
 
 		return;
@@ -313,7 +322,8 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
 			CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("rss10:link"));
 			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
-			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text);
+			CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("dc:date"));
+			AddNewsToFeed(feedid, titlenode->text, urlnode->text, descriptionnode->text, datenode->text);
 		}
 
 		return;
@@ -482,8 +492,8 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 		m_listView.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT);
 		m_listView.AddColumn("Date", 0);
 		m_listView.AddColumn("Title", 1);
-		m_listView.SetColumnWidth(0, 100);
-		m_listView.SetColumnWidth(1, 400);
+		m_listView.SetColumnWidth(0, 150);
+		m_listView.SetColumnWidth(1, 500);
 
 		// register object for message filtering and idle updates
 		CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -653,7 +663,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 			CComPtr<ADODB::_Command> command;
 			command.CoCreateInstance(CComBSTR("ADODB.Command"));
 			command->ActiveConnection = m_connection;
-			command->CommandText = "SELECT * FROM News WHERE FeedID=?";
+			command->CommandText = "SELECT * FROM News WHERE FeedID=? ORDER BY Issued";
 			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
 			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 
@@ -665,11 +675,11 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 				{
 					if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("Y"))
 					{
-						m_listView.InsertItem(0, "01/01/2004", 1);
+						m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 1);
 					}
 					else
 					{
-						m_listView.InsertItem(0, "01/01/2004", 0);
+						m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 0);
 					}
 
 					m_listView.AddItem(0, 1, ATL::CString(recordset->Fields->GetItem("Title")->Value));

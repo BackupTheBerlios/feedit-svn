@@ -7,7 +7,7 @@
 
 // Change these values to use different versions
 #define WINVER		0x0400
-//#define _WIN32_WINNT	0x0400
+#define _WIN32_WINNT	0x0400
 #define _WIN32_IE	0x0400
 #define _RICHEDIT_VER	0x0100
 
@@ -25,6 +25,8 @@ extern CAppModule _Module;
 #include <atlctrls.h>
 #include <atlctrlx.h>
 #include <atlmisc.h>
+#include <atlutil.h>
+#include <atlcomtime.h>
 #include <exdispid.h>
 
 #import "C:\WINDOWS\System32\SHDOCVW.DLL" named_guids

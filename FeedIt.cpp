@@ -13,6 +13,7 @@
 #include "DataStructs.h"
 #include "AboutDlg.h"
 #include "StringDlg.h"
+#include "CustomListView.h"
 #include "MainFrm.h"
 
 CAppModule _Module;

@@ -159,6 +159,9 @@
 				RelativePath=".\AboutDlg.h">
 			</File>
 			<File
+				RelativePath=".\CustomListView.h">
+			</File>
+			<File
 				RelativePath=".\DataStructs.h">
 			</File>
 			<File
@@ -185,6 +188,9 @@
 			</File>
 			<File
 				RelativePath=".\FeedIt.rc">
+			</File>
+			<File
+				RelativePath=".\res\listimage.bmp">
 			</File>
 			<File
 				RelativePath=".\res\toolbar.bmp">

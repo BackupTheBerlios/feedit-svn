@@ -337,6 +337,7 @@ LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
 //
 
 IDB_TREE_IMAGELIST      BITMAP                  "res\\treeimage.bmp"
+IDB_LIST_IMAGELIST      BITMAP                  "res\\listimage.bmp"
 #endif    // Italian (Italy) resources
 /////////////////////////////////////////////////////////////////////////////
 

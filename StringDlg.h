@@ -9,7 +9,7 @@ class CStringDlg : public CDialogImpl<CStringDlg>
 public:
 	enum { IDD = IDD_STRING };
 
-	ATL::CString m_value;
+	CAtlString m_value;
 
 	CStringDlg(LPCTSTR prompt)
 	{
@@ -19,7 +19,7 @@ public:
 private:
 	CStatic m_promptCtrl;
 	CEdit m_valueCtrl;
-	ATL::CString m_prompt;
+	CAtlString m_prompt;
 
 	BEGIN_MSG_MAP(CStringDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)

@@ -3,16 +3,16 @@
 class TreeData
 {
 public:
-	virtual ATL::CString ToString() = 0;
+	virtual CAtlString ToString() = 0;
 
 	int m_id;
-	ATL::CString m_name;
+	CAtlString m_name;
 };
 
 class FolderData : public TreeData
 {
 public:
-	ATL::CString ToString()
+	CAtlString ToString()
 	{
 		return "Folder";
 	}
@@ -21,10 +21,10 @@ public:
 class FeedData : public TreeData
 {
 public:
-	ATL::CString ToString()
+	CAtlString ToString()
 	{
 		return "Feed";
 	}
 
-	ATL::CString m_url;
+	CAtlString m_url;
 };

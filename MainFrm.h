@@ -177,7 +177,7 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 {
 	TV_INSERTSTRUCT tvstruct;
 	HTREEITEM hNewItem;
-	ATL::CString sText;
+	CAtlString sText;
 
 	// get information of the source item
 	tvstruct.item.hItem = hItem;
@@ -205,7 +205,7 @@ HTREEITEM MoveChildItem(HTREEITEM hItem, HTREEITEM htiNewParent, HTREEITEM htiAf
 	return hNewItem;
 }
 
-ATL::CString SniffFeedName(const _bstr_t& url)
+CAtlString SniffFeedName(const _bstr_t& url)
 {
 	CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
 	xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
@@ -220,9 +220,9 @@ ATL::CString SniffFeedName(const _bstr_t& url)
 		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
 
 		if(titlenode != NULL)
-			return ATL::CString(titlenode->text.GetBSTR());
+			return CAtlString(titlenode->text.GetBSTR());
 		else
-			return ATL::CString("(No name)");
+			return CAtlString("(No name)");
 	}
 
 	node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"));
@@ -232,9 +232,9 @@ ATL::CString SniffFeedName(const _bstr_t& url)
 		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
 
 		if(titlenode != NULL)
-			return ATL::CString(titlenode->text.GetBSTR());
+			return CAtlString(titlenode->text.GetBSTR());
 		else
-			return ATL::CString("(No name)");
+			return CAtlString("(No name)");
 	}
 
 	node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss10:channel"));
@@ -244,20 +244,20 @@ ATL::CString SniffFeedName(const _bstr_t& url)
 		CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
 
 		if(titlenode != NULL)
-			return ATL::CString(titlenode->text.GetBSTR());
+			return CAtlString(titlenode->text.GetBSTR());
 		else
-			return ATL::CString("(No name)");
+			return CAtlString("(No name)");
 	}
 
-	return ATL::CString("(Unknown feed type)");
+	return CAtlString("(Unknown feed type)");
 }
 
 void AddNewsToFeed(int feedid, const _bstr_t& title, const _bstr_t& url, const _bstr_t& description, const _bstr_t& date)
 {
 	try
 	{
-		ATL::CString t1((const char*)date);
-		ATL::CString t2;
+		CAtlString t1((const char*)date);
+		CAtlString t2;
 		t2 += t1.Mid(0, 10);
 		t2 += " ";
 		t2 += t1.Mid(11, 8);
@@ -746,7 +746,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 						m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 0);
 					}
 
-					m_listView.AddItem(0, 1, ATL::CString(recordset->Fields->GetItem("Title")->Value));
+					m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
 					m_listView.SetItemData(0, (int)recordset->Fields->GetItem("ID")->Value);
 					recordset->MoveNext();
 				}
@@ -822,7 +822,7 @@ void GetFeedNews(int feedid, const _bstr_t& url)
 
 		if(dlg.DoModal() == IDOK)
 		{
-			ATL::CString name = SniffFeedName((BSTR)CComBSTR(dlg.m_value));
+			CAtlString name = SniffFeedName((BSTR)CComBSTR(dlg.m_value));
 			CComPtr<ADODB::_Recordset> recordset;
 			recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
 			recordset->CursorLocation = ADODB::adUseServer;

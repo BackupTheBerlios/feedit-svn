@@ -95,7 +95,7 @@ public:
 		{
 			FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 
-			if(i != NULL)
+			if(feeddata != NULL)
 			{
 				feeddata->m_unread = GetUnreadItemCount(feeddata->m_id);
 				CAtlString txt;
@@ -172,15 +172,18 @@ public:
 							NewsData* newsdata = new NewsData();
 							newsdata->m_id = recordset->Fields->GetItem("ID")->Value;
 							newsdata->m_url = recordset->Fields->GetItem("URL")->Value;
+							newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
+							newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
+							newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
 
 							if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
 							{
-								m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 1);
+								m_listView.InsertItem(0, newsdata->m_issued, 1);
 								newsdata->m_unread = true;
 							}
 							else
 							{
-								m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 0);
+								m_listView.InsertItem(0, newsdata->m_issued, 0);
 								newsdata->m_unread = false;
 							}
 
@@ -691,6 +694,7 @@ public:
 						feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
 						feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
 						feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
+						feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
 						HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, folderitem, TVI_LAST);
 						m_treeView.SetItemImage(feeditem, 0, 0);
 						m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
@@ -721,6 +725,7 @@ public:
 				feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
 				feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
 				feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
+				feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
 				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, m_feedsRoot, TVI_LAST);
 				m_treeView.SetItemImage(feeditem, 0, 0);
 				m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
@@ -952,8 +957,7 @@ public:
 		}
 
 		m_listView.DeleteAllItems();
-		_variant_t v;
-		m_htmlCtrl->Navigate2(&_variant_t("about:blank"), &v, &v, &v, &v);
+		_variant_t url("about:blank");
 		HTREEITEM i = m_treeView.GetSelectedItem();
 		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 
@@ -976,15 +980,18 @@ public:
 					NewsData* newsdata = new NewsData();
 					newsdata->m_id = recordset->Fields->GetItem("ID")->Value;
 					newsdata->m_url = recordset->Fields->GetItem("URL")->Value;
+					newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
+					newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
+					newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
 
 					if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
 					{
-						m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 1);
+						m_listView.InsertItem(0, newsdata->m_issued, 1);
 						newsdata->m_unread = true;
 					}
 					else
 					{
-						m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 0);
+						m_listView.InsertItem(0, newsdata->m_issued, 0);
 						newsdata->m_unread = false;
 					}
 
@@ -993,8 +1000,86 @@ public:
 					recordset->MoveNext();
 				}
 			}
+
+			TCHAR tmpPath[MAX_PATH];
+			::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, tmpPath);
+			::PathAppend(tmpPath, "FeedIt");
+
+			if(::GetFileAttributes(tmpPath) == INVALID_FILE_ATTRIBUTES)
+			{
+				::CreateDirectory(tmpPath, NULL);
+			}
+
+			::PathAppend(tmpPath, "Temp.htm");
+			HANDLE hFile = ::CreateFile(tmpPath, FILE_ALL_ACCESS, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+			if(hFile != NULL)
+			{
+				CAtlString tmp;
+				WriteLine(hFile, "<html>");
+				WriteLine(hFile, "<head>");
+				WriteLine(hFile, "<META http-equiv=\"Content-Type\" content=\"text/html\">");
+				WriteLine(hFile, "<title>News Item</title>");
+				WriteLine(hFile, "<style type=\"text/css\">");
+				// WriteLine(hFile, "\thtml { border: 6px solid gray; }");
+				WriteLine(hFile, "\tbody { background-color: white; color: black; font: 84% Verdana, Arial, sans-serif; margin: 12px 22px; }");
+				WriteLine(hFile, "\ta { color: #0002CA; }");
+				WriteLine(hFile, "\ta:hover { color: #6B8ADE; text-decoration: underline; }");
+				WriteLine(hFile, "\tspan.nodescription {	color: silver;	font-size: smaller; }");
+				WriteLine(hFile, "");
+				WriteLine(hFile, "\th1,h2,h3,h4,h5,h6 { font-size: 80%; font-weight: bold; font-style: italic;	}");
+				WriteLine(hFile, "");
+				WriteLine(hFile, "\tdiv.favchannel {");
+				WriteLine(hFile, "\t\toverflow: hidden;");
+				WriteLine(hFile, "\t\tborder: 1px solid #6B8ADE;");
+				WriteLine(hFile, "\t\tbackground-color: #D6DFF7;");
+				WriteLine(hFile, "\t\tfloat: left;");
+				WriteLine(hFile, "\t\tmargin: 0 14px 10px 0;");
+				WriteLine(hFile, "\t\tpadding: 16px 16px 0 16px; width: 40%;");
+				WriteLine(hFile, "\t}");
+				WriteLine(hFile, "");
+				WriteLine(hFile, "\tdiv.newspapertitle { font-weight: bold; font-size: 120%; text-align: center; padding-bottom: 12px; text-transform: uppercase; }");
+				WriteLine(hFile, "\tdiv.channel { border-bottom: 1px dotted silver; margin-top: 14px}");
+				WriteLine(hFile, "\tdiv.channeltitle { font-weight: bold; text-transform: uppercase; margin-top: 12px; margin-bottom: 18px;}");
+				WriteLine(hFile, "\timg.channel { border: none; }");
+				WriteLine(hFile, "");
+				WriteLine(hFile, "\tdiv.newsitemcontent { line-height: 140%; }");
+				WriteLine(hFile, "\tdiv.newsitemcontent ol, div.newsitemcontent ul { list-style-position: inside;}");
+				WriteLine(hFile, "\tdiv.newsitemtitle { font-weight: bold; margin-bottom: 8px }");
+				WriteLine(hFile, "\tdiv.newsitemfooter { color: gray; font-size: xx-small; text-align: left; margin-top: 6px; margin-bottom: 18px; }");
+				WriteLine(hFile, "");
+				WriteLine(hFile, "\tdiv.newsitemtitle a, div.newsitemcontent a, div.newsitemfooter a { text-decoration: none; }");
+				WriteLine(hFile, "</style><style>");
+				WriteLine(hFile, "\tdiv.newspapertitle { margin-bottom: 12px; border-bottom: 1px dashed silver; }");
+				WriteLine(hFile, "</style>");
+				WriteLine(hFile, "</head>");
+				WriteLine(hFile, "<body>");
+
+				for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
+				{
+					NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+					if(newsdata != NULL)
+					{
+						CAtlString tmp;
+						tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>\n", (const char*)newsdata->m_url, (const char*)newsdata->m_title);
+						WriteLine(hFile, tmp);
+						tmp.Format("\t<div class=\"newsitemcontent\">%s</div>\n", (const char*)newsdata->m_description);
+						WriteLine(hFile, tmp);
+						tmp.Format("\t<div class=\"newsitemfooter\">Received %s</div>", (const char*)newsdata->m_issued);
+						WriteLine(hFile, tmp);
+					}
+				}
+
+				WriteLine(hFile, "</body>");
+				WriteLine(hFile, "</html>");
+				::CloseHandle(hFile);
+				url = tmpPath;
+			}
 		}
 
+		_variant_t v;
+		m_htmlCtrl->Navigate2(&url, &v, &v, &v, &v);
 		return 0;
 	}
 
@@ -1054,14 +1139,97 @@ public:
 		return FALSE;
 	}
 
+	void WriteLine(HANDLE hFile, const char* str)
+	{
+		DWORD written = 0;
+		::WriteFile(hFile, str, strlen(str), &written, NULL);
+		::WriteFile(hFile, "\r\n", 2, &written, NULL);
+	}
+
 	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
 	{
+		HTREEITEM i = m_treeView.GetSelectedItem();
+		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 		int idx = m_listView.GetSelectedIndex();
 		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
 
-		if(newsdata != NULL)
+		if(feeddata != NULL && newsdata != NULL)
 		{
-			_variant_t url(newsdata->m_url);
+			_variant_t url;
+
+			if(feeddata->m_navigateURL == 1 || (feeddata->m_navigateURL == 0 && strlen(newsdata->m_description) < 60))
+			{
+				url = newsdata->m_url;
+			}
+			else
+			{
+				TCHAR tmpPath[MAX_PATH];
+				::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, tmpPath);
+				::PathAppend(tmpPath, "FeedIt");
+
+				if(::GetFileAttributes(tmpPath) == INVALID_FILE_ATTRIBUTES)
+				{
+					::CreateDirectory(tmpPath, NULL);
+				}
+
+				::PathAppend(tmpPath, "Temp.htm");
+				HANDLE hFile = ::CreateFile(tmpPath, FILE_ALL_ACCESS, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+				if(hFile != NULL)
+				{
+					CAtlString tmp;
+					WriteLine(hFile, "<html>");
+					WriteLine(hFile, "<head>");
+					WriteLine(hFile, "<META http-equiv=\"Content-Type\" content=\"text/html\">");
+					WriteLine(hFile, "<title>News Item</title>");
+					WriteLine(hFile, "<style type=\"text/css\">");
+					// WriteLine(hFile, "\thtml { border: 6px solid gray; }");
+					WriteLine(hFile, "\tbody { background-color: white; color: black; font: 84% Verdana, Arial, sans-serif; margin: 12px 22px; }");
+					WriteLine(hFile, "\ta { color: #0002CA; }");
+					WriteLine(hFile, "\ta:hover { color: #6B8ADE; text-decoration: underline; }");
+					WriteLine(hFile, "\tspan.nodescription {	color: silver;	font-size: smaller; }");
+					WriteLine(hFile, "");
+					WriteLine(hFile, "\th1,h2,h3,h4,h5,h6 { font-size: 80%; font-weight: bold; font-style: italic;	}");
+					WriteLine(hFile, "");
+					WriteLine(hFile, "\tdiv.favchannel {");
+					WriteLine(hFile, "\t\toverflow: hidden;");
+					WriteLine(hFile, "\t\tborder: 1px solid #6B8ADE;");
+					WriteLine(hFile, "\t\tbackground-color: #D6DFF7;");
+					WriteLine(hFile, "\t\tfloat: left;");
+					WriteLine(hFile, "\t\tmargin: 0 14px 10px 0;");
+					WriteLine(hFile, "\t\tpadding: 16px 16px 0 16px; width: 40%;");
+					WriteLine(hFile, "\t}");
+					WriteLine(hFile, "");
+					WriteLine(hFile, "\tdiv.newspapertitle { font-weight: bold; font-size: 120%; text-align: center; padding-bottom: 12px; text-transform: uppercase; }");
+					WriteLine(hFile, "\tdiv.channel { border-bottom: 1px dotted silver; margin-top: 14px}");
+					WriteLine(hFile, "\tdiv.channeltitle { font-weight: bold; text-transform: uppercase; margin-top: 12px; margin-bottom: 18px;}");
+					WriteLine(hFile, "\timg.channel { border: none; }");
+					WriteLine(hFile, "");
+					WriteLine(hFile, "\tdiv.newsitemcontent { line-height: 140%; }");
+					WriteLine(hFile, "\tdiv.newsitemcontent ol, div.newsitemcontent ul { list-style-position: inside;}");
+					WriteLine(hFile, "\tdiv.newsitemtitle { font-weight: bold; margin-bottom: 8px }");
+					WriteLine(hFile, "\tdiv.newsitemfooter { color: gray; font-size: xx-small; text-align: left; margin-top: 6px; margin-bottom: 18px; }");
+					WriteLine(hFile, "");
+					WriteLine(hFile, "\tdiv.newsitemtitle a, div.newsitemcontent a, div.newsitemfooter a { text-decoration: none; }");
+					WriteLine(hFile, "</style><style>");
+					WriteLine(hFile, "\tdiv.newsitemtitle { border-bottom: 1px dotted silver; margin-bottom: 10px; padding-bottom: 10px;}");
+					WriteLine(hFile, "\tdiv.newsitemfooter { text-align: right; margin-top: 14px; padding-top: 6px; border-top: 1px dashed #CBCBCB; }");
+					WriteLine(hFile, "</style>");
+					WriteLine(hFile, "</head>");
+					WriteLine(hFile, "<body>");
+					tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>\n", (const char*)newsdata->m_url, (const char*)newsdata->m_title);
+					WriteLine(hFile, tmp);
+					tmp.Format("\t<div class=\"newsitemcontent\">%s</div>\n", (const char*)newsdata->m_description);
+					WriteLine(hFile, tmp);
+					tmp.Format("\t<div class=\"newsitemfooter\">%s<br>Received %s</div>", (const char*)feeddata->m_name, (const char*)newsdata->m_issued);
+					WriteLine(hFile, tmp);
+					WriteLine(hFile, "</body>");
+					WriteLine(hFile, "</html>");
+					::CloseHandle(hFile);
+					url = tmpPath;
+				}
+			}
+
 			_variant_t v;
 			m_htmlCtrl->Navigate2(&url, &v, &v, &v, &v);
 
@@ -1076,8 +1244,6 @@ public:
 				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 				newsdata->m_unread = false;
 				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
-				HTREEITEM i = m_treeView.GetSelectedItem();
-				FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 				feeddata->m_unread--;
 				CAtlString txt;
 				m_treeView.GetItemText(i, txt);
@@ -1136,7 +1302,7 @@ public:
 			recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
 			recordset->Fields->GetItem("RefreshInterval")->Value = 60;
 			recordset->Fields->GetItem("MaxAge")->Value = 0;
-			recordset->Fields->GetItem("NavigateURL")->Value = _bstr_t("1");
+			recordset->Fields->GetItem("NavigateURL")->Value = _bstr_t("0");
 			recordset->Update();
 			FeedData* itemdata = new FeedData();
 			itemdata->m_id = recordset->Fields->GetItem("ID")->Value;

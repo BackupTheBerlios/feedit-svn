@@ -27,6 +27,7 @@ public:
 	}
 
 	int m_unread;
+	int m_navigateURL;
 };
 
 class ListData
@@ -46,5 +47,8 @@ public:
 		return "News";
 	}
 
+	CAtlString m_issued;
+	CAtlString m_title;
+	CAtlString m_description;
 	bool m_unread;
 };

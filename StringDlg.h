@@ -4,7 +4,9 @@
 
 #pragma once
 
-class CStringDlg : public CDialogImpl<CStringDlg>
+class CStringDlg :
+	public CDialogImpl<CStringDlg>,
+	public CWinDataExchange<CStringDlg>
 {
 public:
 	enum { IDD = IDD_STRING };
@@ -28,6 +30,11 @@ private:
 		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
 	END_MSG_MAP()
 
+	BEGIN_DDX_MAP(CStringDlg)
+		DDX_TEXT(IDC_PROMPT, m_prompt)
+		DDX_TEXT(IDC_VALUE, m_value)
+	END_DDX_MAP()
+
 // Handler prototypes (uncomment arguments if needed):
 //	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 //	LRESULT CommandHandler(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -35,24 +42,23 @@ private:
 
 	LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
-		m_promptCtrl.Attach(GetDlgItem(IDC_PROMPT));
-		m_promptCtrl.SetWindowText(m_prompt);
-		m_valueCtrl.Attach(GetDlgItem(IDC_VALUE));
-		m_valueCtrl.SetWindowText(m_value);
+		DoDataExchange(false);
 		CenterWindow(GetParent());
 		return TRUE;
 	}
 
 	LRESULT OnShowWindow(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
-		m_valueCtrl.SetSel(0, -1);
-		m_valueCtrl.SetFocus();
+		CEdit ctrl;
+		ctrl.Attach(GetDlgItem(IDC_VALUE));
+		ctrl.SetSel(0, -1);
+		ctrl.SetFocus();
 		return TRUE;
 	}
 
 	LRESULT OnOk(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		m_valueCtrl.GetWindowText(m_value);
+		DoDataExchange(true);
 		EndDialog(wID);
 		return 0;
 	}

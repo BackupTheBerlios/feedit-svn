@@ -67,6 +67,7 @@ public:
 			m_retainCombo.SetCurSel(4);
 
 		DoDataExchange(false);
+		CenterWindow(GetParent());
 		return 0;
 	}
 

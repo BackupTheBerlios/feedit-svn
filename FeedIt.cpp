@@ -94,6 +94,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 //	HRESULT hRes = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	ATLASSERT(SUCCEEDED(hRes));
 
+#if 0
 	COleDateTime now = COleDateTime::GetCurrentTime();
 	COleDateTime limit(2005, 1, 1, 0, 0, 0);
 
@@ -103,6 +104,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		::CloseHandle(hMutex);
 		return 0;
 	}
+#endif
 
 	// this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used
 	::DefWindowProc(NULL, 0, 0, 0L);

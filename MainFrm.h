@@ -62,7 +62,7 @@ public:
 			connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
 			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
-			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL)"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, StoreInterval INTEGER NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
 		}
 	}
@@ -108,6 +108,7 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FEED, OnFileNewFeed)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
+		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
@@ -212,7 +213,7 @@ public:
 		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
 		xmldocument->async = FALSE;
 		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
-		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
+		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:atom=\"http://purl.org/atom/ns#\""));
 		xmldocument->load(_variant_t(url));
 		CComPtr<MSXML2::IXMLDOMNode> node = xmldocument->selectSingleNode(_bstr_t("/rss/channel"));
 
@@ -250,6 +251,18 @@ public:
 				return CAtlString("(No name)");
 		}
 
+		node = xmldocument->selectSingleNode(_bstr_t("/atom:feed"));
+
+		if(node != NULL)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("atom:title"));
+
+			if(titlenode != NULL)
+				return CAtlString(titlenode->text.GetBSTR());
+			else
+				return CAtlString("(No name)");
+		}
+
 		return CAtlString("(Unknown feed type)");
 	}
 
@@ -273,8 +286,8 @@ public:
 			recordset->Fields->GetItem("URL")->Value = url;
 			recordset->Fields->GetItem("Description")->Value = description;
 			recordset->Fields->GetItem("Issued")->Value = _bstr_t(t2);
-			recordset->Fields->GetItem("Unread")->Value = _bstr_t("Y");
-			recordset->Fields->GetItem("Flagged")->Value = _bstr_t("N");
+			recordset->Fields->GetItem("Unread")->Value = _bstr_t("1");
+			recordset->Fields->GetItem("Flagged")->Value = _bstr_t("0");
 			recordset->Update();
 		}
 		catch(...)
@@ -288,7 +301,7 @@ public:
 		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
 		xmldocument->async = FALSE;
 		xmldocument->setProperty(_bstr_t("SelectionLanguage"), _variant_t("XPath"));
-		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\""));
+		xmldocument->setProperty(_bstr_t("SelectionNamespaces"), _variant_t("xmlns:rss09=\"http://my.netscape.com/rdf/simple/0.9/\" xmlns:rss10=\"http://purl.org/rss/1.0/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:atom=\"http://purl.org/atom/ns#\""));
 		xmldocument->load(_variant_t(url));
 
 		CComPtr<MSXML2::IXMLDOMNodeList> nodes = xmldocument->selectNodes(_bstr_t("/rss/channel/item"));
@@ -344,6 +357,27 @@ public:
 
 			return;
 		}
+
+		nodes = xmldocument->selectNodes(_bstr_t("/atom:feed/atom:entry"));
+
+		if(nodes != NULL && nodes->length > 0)
+		{
+			CComPtr<MSXML2::IXMLDOMNode> node;
+
+			while((node = nodes->nextNode()) != NULL)
+			{
+				CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("atom:title"));
+				CComPtr<MSXML2::IXMLDOMNode> urlnode = node->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
+				CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("atom:content"));
+				CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("atom:issued"));
+				TCHAR buf[1024];
+				DWORD buflen = 1024;
+				AtlCombineUrl(url, urlnode->text, buf, &buflen);
+				AddNewsToFeed(feedid, titlenode->text, url, descriptionnode->xml, datenode->text);
+			}
+
+			return;
+		}
 	}
 
 	int GetUnreadItemCount(int feedid)
@@ -351,7 +385,7 @@ public:
 		CComPtr<ADODB::_Command> command;
 		command.CoCreateInstance(CComBSTR("ADODB.Command"));
 		command->ActiveConnection = m_connection;
-		command->CommandText = "SELECT COUNT(*) AS ItemCount FROM News WHERE FeedID=? AND Unread='Y'";
+		command->CommandText = "SELECT COUNT(*) AS ItemCount FROM News WHERE FeedID=? AND Unread='1'";
 		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feedid)));
 		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 
@@ -735,6 +769,11 @@ public:
 
 	LRESULT OnTreeSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
 	{
+		for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
+		{
+			delete dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+		}
+
 		m_listView.DeleteAllItems();
 		_variant_t v;
 		m_htmlCtrl->Navigate2(&_variant_t("about:blank"), &v, &v, &v, &v);
@@ -756,17 +795,23 @@ public:
 
 				while(!recordset->EndOfFile)
 				{
-					if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("Y"))
+					NewsData* newsdata = new NewsData();
+					newsdata->m_id = recordset->Fields->GetItem("ID")->Value;
+					newsdata->m_url = recordset->Fields->GetItem("URL")->Value;
+
+					if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
 					{
 						m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 1);
+						newsdata->m_unread = true;
 					}
 					else
 					{
 						m_listView.InsertItem(0, (_bstr_t)recordset->Fields->GetItem("Issued")->Value, 0);
+						newsdata->m_unread = false;
 					}
 
 					m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
-					m_listView.SetItemData(0, (int)recordset->Fields->GetItem("ID")->Value);
+					m_listView.SetItemData(0, (DWORD_PTR)newsdata);
 					recordset->MoveNext();
 				}
 			}
@@ -778,32 +823,28 @@ public:
 	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
 	{
 		int idx = m_listView.GetSelectedIndex();
-		int id = m_listView.GetItemData(idx);
-		CComPtr<ADODB::_Command> command;
-		command.CoCreateInstance(CComBSTR("ADODB.Command"));
-		command->ActiveConnection = m_connection;
-		command->CommandText = "SELECT * FROM News WHERE ID=?";
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(id)));
-		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
 
-		if(!recordset->EndOfFile)
+		if(newsdata != NULL)
 		{
-			recordset->MoveFirst();
+			_variant_t url(newsdata->m_url);
 			_variant_t v;
-			m_htmlCtrl->Navigate2(&recordset->Fields->GetItem("URL")->Value, &v, &v, &v, &v);
+			m_htmlCtrl->Navigate2(&url, &v, &v, &v, &v);
 
-			if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("Y"))
+			if(newsdata->m_unread)
 			{
-				CComPtr<ADODB::_Command> subcommand;
-				subcommand.CoCreateInstance(CComBSTR("ADODB.Command"));
-				subcommand->ActiveConnection = m_connection;
-				subcommand->CommandText = "UPDATE News SET Unread='N' WHERE ID=?";
-				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(id)));
-				CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				command->ActiveConnection = m_connection;
+				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				newsdata->m_unread = false;
 				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
 				HTREEITEM i = m_treeView.GetSelectedItem();
 				FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 				feeddata->m_unread--;
+				m_listView.Invalidate();
 				m_treeView.Invalidate();
 			}
 		}
@@ -856,6 +897,7 @@ public:
 			recordset->Fields->GetItem("URL")->Value = _bstr_t(dlg.m_value);
 			recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
 			recordset->Fields->GetItem("RefreshInterval")->Value = 60;
+			recordset->Fields->GetItem("StoreInterval")->Value = 0;
 			recordset->Update();
 			FeedData* itemdata = new FeedData();
 			itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
@@ -937,6 +979,34 @@ public:
 			delete (TreeData*)m_treeView.GetItemData(i);
 			m_treeView.DeleteItem(i);
 		}
+
+		return 0;
+	}
+
+	LRESULT OnActionsMarkRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		for(int idx = 0; idx < m_listView.GetItemCount(); ++idx)
+		{
+			NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+			if(newsdata != NULL && newsdata->m_unread)
+			{
+				CComPtr<ADODB::_Command> command;
+				command.CoCreateInstance(CComBSTR("ADODB.Command"));
+				command->ActiveConnection = m_connection;
+				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
+				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+				newsdata->m_unread = false;
+				m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
+				HTREEITEM i = m_treeView.GetSelectedItem();
+				FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+				feeddata->m_unread--;
+			}
+		}
+
+		m_listView.Invalidate();
+		m_treeView.Invalidate();
 
 		return 0;
 	}

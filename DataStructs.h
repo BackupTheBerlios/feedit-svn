@@ -28,3 +28,23 @@ public:
 
 	int m_unread;
 };
+
+class ListData
+{
+public:
+	virtual CAtlString ToString() = 0;
+
+	int m_id;
+	CAtlString m_url;
+};
+
+class NewsData : public ListData
+{
+public:
+	CAtlString ToString()
+	{
+		return "News";
+	}
+
+	bool m_unread;
+};

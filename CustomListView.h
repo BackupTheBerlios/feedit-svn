@@ -40,11 +40,8 @@ public:
 		if(::IsWindow(m_hWnd) && idCtrl == GetDlgCtrlID())
 		{
 			NMLVCUSTOMDRAW* pLVCD = reinterpret_cast<NMLVCUSTOMDRAW*>(lpNMCustomDraw);
-			LVITEM lvi = { 0 };
-			lvi.iItem = pLVCD->nmcd.dwItemSpec;
-			lvi.mask = LVIF_IMAGE;
-			GetItem(&lvi);
-			if(lvi.iImage == 1)
+			NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)GetItemData(pLVCD->nmcd.dwItemSpec));
+			if(newsdata != NULL && newsdata->m_unread)
 				::SelectObject(pLVCD->nmcd.hdc, AtlCreateBoldFont());
 			return CDRF_NEWFONT;
 		}

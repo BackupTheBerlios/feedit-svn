@@ -6,7 +6,6 @@ public:
 	virtual CAtlString ToString() = 0;
 
 	int m_id;
-	CAtlString m_name;
 };
 
 class FolderData : public TreeData
@@ -16,6 +15,8 @@ public:
 	{
 		return "Folder";
 	}
+
+	CAtlString m_name;
 };
 
 class FeedData : public TreeData
@@ -26,6 +27,9 @@ public:
 		return "Feed";
 	}
 
+	CAtlString m_title;
+	CAtlString m_link;
+	CAtlString m_description;
 	int m_unread;
 	int m_navigateURL;
 };

@@ -20,7 +20,7 @@ public:
 	END_MSG_MAP()
 
 	BEGIN_DDX_MAP(CFeedPropertiesPage)
-		DDX_TEXT(IDC_FEED_NAME, m_name)
+		DDX_TEXT(IDC_FEED_TITLE, m_title)
 		DDX_TEXT(IDC_FEED_URL, m_url)
 		DDX_RADIO(IDC_FEED_BROWSE_DEFAULT, m_browse)
 	END_DDX_MAP()
@@ -117,7 +117,7 @@ public:
 		return DoDataExchange(true) ? PSNRET_NOERROR : PSNRET_INVALID;
 	}
 
-	CAtlString m_name;
+	CAtlString m_title;
 	CAtlString m_url;
 	int m_update;
 	int m_retain;

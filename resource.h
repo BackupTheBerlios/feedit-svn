@@ -17,12 +17,12 @@
 #define IDC_STRING                      1001
 #define IDC_VALUE                       1002
 #define IDC_FEED_NAME                   1003
+#define IDC_FEED_TITLE                  1003
 #define IDC_FEED_URL                    1004
 #define IDC_FEED_UPDATE                 1009
 #define IDC_FEED_RETAIN                 1010
 #define IDC_FEED_BROWSE_DEFAULT         1011
 #define IDC_FEED_BROWSE_SUMMARY         1012
-#define IDC_FEED_BROWSE_SUMMARY2        1013
 #define IDC_FEED_BROWSE_LINK            1013
 #define ID_FILE_NEW_FEED                32772
 #define ID_FILE_NEW_FOLDER              32773

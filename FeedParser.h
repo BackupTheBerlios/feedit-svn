@@ -20,7 +20,7 @@ public:
 		CAtlString m_date;
 	};
 
-	CFeedParser(const char* url) : m_feedType(FPFT_UNKNOWN)
+	CFeedParser(const char* url) : m_type(FPFT_UNKNOWN)
 	{
 		CComPtr<MSXML2::IXMLDOMDocument2> xmldocument;
 		xmldocument.CoCreateInstance(CComBSTR("Msxml2.DOMDocument"));
@@ -33,38 +33,70 @@ public:
 
 		if((node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss09:channel"))) != NULL)
 		{
-			m_feedType = FPFT_RSS09;
+			m_type = FPFT_RSS09;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss09:title"));
+			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("rss09:link"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
 
 			if(titlenode != NULL)
-				m_feedName = (LPTSTR)titlenode->text;
+				m_title = (LPTSTR)titlenode->text;
+
+			if(linknode != NULL)
+				m_link = (LPTSTR)linknode->text;
+
+			if(descriptionnode != NULL)
+				m_description = (LPTSTR)descriptionnode->text;
 		}
 		else if((node = xmldocument->selectSingleNode(_bstr_t("/rdf:RDF/rss10:channel"))) != NULL)
 		{
-			m_feedType = FPFT_RSS10;
+			m_type = FPFT_RSS10;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("rss10:title"));
+			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("rss10:link"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
 
 			if(titlenode != NULL)
-				m_feedName = (LPTSTR)titlenode->text;
+				m_title = (LPTSTR)titlenode->text;
+
+			if(linknode != NULL)
+				m_link = (LPTSTR)linknode->text;
+
+			if(descriptionnode != NULL)
+				m_description = (LPTSTR)descriptionnode->text;
 		}
 		else if((node = xmldocument->selectSingleNode(_bstr_t("/rss/channel"))) != NULL)
 		{
-			m_feedType = FPFT_RSS20;
+			m_type = FPFT_RSS20;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("title"));
+			CComPtr<MSXML2::IXMLDOMNode> linknode = node->selectSingleNode(_bstr_t("link"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = node->selectSingleNode(_bstr_t("description"));
 
 			if(titlenode != NULL)
-				m_feedName = (LPTSTR)titlenode->text;
+				m_title = (LPTSTR)titlenode->text;
+
+			if(linknode != NULL)
+				m_link = (LPTSTR)linknode->text;
+
+			if(descriptionnode != NULL)
+				m_description = (LPTSTR)descriptionnode->text;
 		}
 		else if((node = xmldocument->selectSingleNode(_bstr_t("/atom:feed"))) != NULL)
 		{
-			m_feedType = FPFT_ATOM;
+			m_type = FPFT_ATOM;
 			CComPtr<MSXML2::IXMLDOMNode> titlenode = node->selectSingleNode(_bstr_t("atom:title"));
+			CComPtr<MSXML2::IXMLDOMNode> linknode = xmldocument->selectSingleNode(_bstr_t("atom:link[@rel=\"alternate\"]/@href"));
+			CComPtr<MSXML2::IXMLDOMNode> descriptionnode = xmldocument->selectSingleNode(_bstr_t("atom:tagline"));
 
 			if(titlenode != NULL)
-				m_feedName = (LPTSTR)titlenode->text;
+				m_title = (LPTSTR)titlenode->text;
+
+			if(linknode != NULL)
+				m_link = (LPTSTR)linknode->text;
+
+			if(descriptionnode != NULL)
+				m_description = (LPTSTR)descriptionnode->text;
 		}
 
-		switch(m_feedType)
+		switch(m_type)
 		{
 		case FPFT_RSS09:
 			{
@@ -94,7 +126,7 @@ public:
 						if(datenode != NULL)
 							item.m_date = (LPTSTR)datenode->text;
 
-						m_feedItems.Add(item);
+						m_items.Add(item);
 					}
 				}
 
@@ -128,7 +160,7 @@ public:
 						if(datenode != NULL)
 							item.m_date = (LPTSTR)datenode->text;
 
-						m_feedItems.Add(item);
+						m_items.Add(item);
 					}
 				}
 
@@ -166,7 +198,7 @@ public:
 						if(datenode != NULL)
 							item.m_date = (LPTSTR)datenode->text;
 
-						m_feedItems.Add(item);
+						m_items.Add(item);
 					}
 				}
 
@@ -206,7 +238,7 @@ public:
 						if(datenode != NULL)
 							item.m_date = (LPTSTR)datenode->text;
 
-						m_feedItems.Add(item);
+						m_items.Add(item);
 					}
 				}
 
@@ -215,7 +247,9 @@ public:
 		}
 	}
 
-	FeedType m_feedType;
-	CAtlString m_feedName;
-	CAtlArray<FeedItem> m_feedItems;
+	FeedType m_type;
+	CAtlString m_title;
+	CAtlString m_link;
+	CAtlString m_description;
+	CAtlArray<FeedItem> m_items;
 };

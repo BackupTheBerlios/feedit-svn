@@ -75,11 +75,11 @@ public:
 			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultMaxAge', '30')"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Folders (Name) VALUES ('Sample feeds')"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Link VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Name, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Name, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Name, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE INDEX NewsI1 ON News (FeedID)"), NULL, 0);
 		}
@@ -118,6 +118,7 @@ public:
 
 			if(feeddata != NULL)
 			{
+				UpdateFeedProperties(feeddata);
 				feeddata->m_unread = GetUnreadItemCount(feeddata->m_id);
 				CAtlString txt;
 				m_treeView.GetItemText(i, txt);
@@ -235,8 +236,8 @@ public:
 							NewsData* newsdata = new NewsData();
 							newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
 							newsdata->m_url = recordset->Fields->GetItem("News.URL")->Value;
-							newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
-							newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
+							newsdata->m_title = recordset->Fields->GetItem("News.Title")->Value;
+							newsdata->m_description = recordset->Fields->GetItem("News.Description")->Value;
 							newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
 							newsdata->m_feedTreeItem = GetFeedTreeItem(recordset->Fields->GetItem("Feeds.ID")->Value);
 							feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
@@ -252,8 +253,8 @@ public:
 								newsdata->m_unread = false;
 							}
 
-							m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
-							m_listView.AddItem(0, 2, feeddata->m_name);
+							m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("News.Title")->Value));
+							m_listView.AddItem(0, 2, feeddata->m_title);
 							m_listView.SetItemData(0, (DWORD_PTR)newsdata);
 						}
 
@@ -399,7 +400,7 @@ public:
 				int refresh = recordset->Fields->GetItem("RefreshInterval")->Value;
 
 				if(refresh == -1)
-					refresh = 60;
+					refresh = GetConfiguration("DefaultRefreshInterval", 60);
 
 				if(refresh > 0)
 				{
@@ -411,9 +412,11 @@ public:
 						_bstr_t url = recordset->Fields->GetItem("URL")->Value;
 						CFeedParser fp(url);
 
-						for(size_t i = 0; i < fp.m_feedItems.GetCount(); ++i)
-							AddNewsToFeed(feedid, fp.m_feedItems[i]);
+						for(size_t i = 0; i < fp.m_items.GetCount(); ++i)
+							AddNewsToFeed(feedid, fp.m_items[i]);
 
+						recordset->Fields->GetItem("Link")->Value = (_bstr_t)fp.m_link;
+						recordset->Fields->GetItem("Description")->Value = (_bstr_t)fp.m_description;
 						recordset->Fields->GetItem("LastUpdate")->Value = (BSTR)CComBSTR(now.Format("%Y/%m/%d %H:%M:%S"));
 						recordset->Update();
 					}
@@ -562,6 +565,43 @@ public:
 		}
 	}
 
+	void UpdateFeedProperties(FeedData* feeddata)
+	{
+		CComPtr<ADODB::_Command> command;
+		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ATLASSERT(command != NULL);
+		command->ActiveConnection = m_connection;
+		command->CommandText = "SELECT * FROM Feeds WHERE ID=?";
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
+		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+		if(!recordset->EndOfFile)
+		{
+			recordset->MoveFirst();
+			feeddata->m_link = recordset->Fields->GetItem("Link")->Value;
+			feeddata->m_description = recordset->Fields->GetItem("Description")->Value;
+		}
+	}
+
+	int GetConfiguration(const char* name, int def)
+	{
+		CComPtr<ADODB::_Command> command;
+		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ATLASSERT(command != NULL);
+		command->ActiveConnection = m_connection;
+		command->CommandText = "SELECT * FROM Configuration WHERE Name=?";
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(name)));
+		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+
+		if(!recordset->EndOfFile)
+		{
+			recordset->MoveFirst();
+			return atoi((_bstr_t)recordset->Fields->GetItem("CurrentValue")->Value);
+		}
+
+		return def;
+	}
+
 	int GetUnreadItemCount(int feedid)
 	{
 		CComPtr<ADODB::_Command> command;
@@ -706,10 +746,12 @@ public:
 					{
 						FeedData* feeditemdata = new FeedData();
 						feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
-						feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
+						feeditemdata->m_title = subrecordset->Fields->GetItem("Title")->Value;
+						feeditemdata->m_link = subrecordset->Fields->GetItem("Link")->Value;
+						feeditemdata->m_description = subrecordset->Fields->GetItem("Description")->Value;
 						feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 						feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
-						HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, folderitem, TVI_LAST);
+						HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_title, folderitem, TVI_LAST);
 						m_treeView.SetItemImage(feeditem, 0, 0);
 						m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
 						subrecordset->MoveNext();
@@ -737,10 +779,12 @@ public:
 				int id = subrecordset->Fields->GetItem("ID")->Value;
 				FeedData* feeditemdata = new FeedData();
 				feeditemdata->m_id = subrecordset->Fields->GetItem("ID")->Value;
-				feeditemdata->m_name = subrecordset->Fields->GetItem("Name")->Value;
+				feeditemdata->m_title = subrecordset->Fields->GetItem("Title")->Value;
+				feeditemdata->m_link = subrecordset->Fields->GetItem("Link")->Value;
+				feeditemdata->m_description = subrecordset->Fields->GetItem("Description")->Value;
 				feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 				feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
-				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_name, m_feedsRoot, TVI_LAST);
+				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_title, m_feedsRoot, TVI_LAST);
 				m_treeView.SetItemImage(feeditem, 0, 0);
 				m_treeView.SetItemData(feeditem, (DWORD_PTR)feeditemdata);
 				subrecordset->MoveNext();
@@ -1071,11 +1115,11 @@ public:
 						NewsData* newsdata = new NewsData();
 						newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
 						newsdata->m_url = recordset->Fields->GetItem("News.URL")->Value;
-						newsdata->m_title = recordset->Fields->GetItem("Title")->Value;
-						newsdata->m_description = recordset->Fields->GetItem("Description")->Value;
+						newsdata->m_title = recordset->Fields->GetItem("News.Title")->Value;
+						newsdata->m_description = recordset->Fields->GetItem("News.Description")->Value;
 						newsdata->m_issued = recordset->Fields->GetItem("Issued")->Value;
 						newsdata->m_feedTreeItem = GetFeedTreeItem(recordset->Fields->GetItem("Feeds.ID")->Value);
-						feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
+						FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
 
 						if((_bstr_t)recordset->Fields->GetItem("Unread")->Value == _bstr_t("1"))
 						{
@@ -1088,8 +1132,8 @@ public:
 							newsdata->m_unread = false;
 						}
 
-						m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("Title")->Value));
-						m_listView.AddItem(0, 2, feeddata->m_name);
+						m_listView.AddItem(0, 1, CAtlString(recordset->Fields->GetItem("News.Title")->Value));
+						m_listView.AddItem(0, 2, feeddata->m_title);
 						m_listView.SetItemData(0, (DWORD_PTR)newsdata);
 						recordset->MoveNext();
 					}
@@ -1114,42 +1158,43 @@ public:
 				WriteLine(hFile, "<html>");
 				WriteLine(hFile, "<head>");
 				WriteLine(hFile, "<META http-equiv=\"Content-Type\" content=\"text/html\">");
-				WriteLine(hFile, "<title>News Item</title>");
+				WriteLine(hFile, "<title>FeedIt</title>");
 				WriteLine(hFile, "<style type=\"text/css\">");
-				// WriteLine(hFile, "\thtml { border: 6px solid gray; }");
+				WriteLine(hFile, "\thtml { border: 4px solid gray; }");
 				WriteLine(hFile, "\tbody { background-color: white; color: black; font: 84% Verdana, Arial, sans-serif; margin: 12px 22px; }");
 				WriteLine(hFile, "\ttable { font: 100% Verdana, Arial, sans-serif; }");
 				WriteLine(hFile, "\ta { color: #0002CA; }");
 				WriteLine(hFile, "\ta:hover { color: #6B8ADE; text-decoration: underline; }");
-				WriteLine(hFile, "\tspan.nodescription { color: silver; font-size: smaller; }");
 				WriteLine(hFile, "");
 				WriteLine(hFile, "\th1,h2,h3,h4,h5,h6 { font-size: 80%; font-weight: bold; font-style: italic;	}");
 				WriteLine(hFile, "");
-				WriteLine(hFile, "\tdiv.favchannel {");
-				WriteLine(hFile, "\t\toverflow: hidden;");
-				WriteLine(hFile, "\t\tborder: 1px solid #6B8ADE;");
-				WriteLine(hFile, "\t\tbackground-color: #D6DFF7;");
-				WriteLine(hFile, "\t\tfloat: left;");
-				WriteLine(hFile, "\t\tmargin: 0 14px 10px 0;");
-				WriteLine(hFile, "\t\tpadding: 16px 16px 0 16px; width: 40%;");
-				WriteLine(hFile, "\t}");
-				WriteLine(hFile, "");
-				WriteLine(hFile, "\tdiv.newspapertitle { font-weight: bold; font-size: 120%; text-align: center; padding-bottom: 12px; text-transform: uppercase; }");
-				WriteLine(hFile, "\tdiv.channel { border-bottom: 1px dotted silver; margin-top: 14px}");
-				WriteLine(hFile, "\tdiv.channeltitle { font-weight: bold; text-transform: uppercase; margin-top: 12px; margin-bottom: 18px;}");
-				WriteLine(hFile, "\timg.channel { border: none; }");
+				WriteLine(hFile, "\tdiv.newspapertitle { font-weight: bold; font-size: 120%; text-align: center; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed silver; }");
 				WriteLine(hFile, "");
 				WriteLine(hFile, "\tdiv.newsitemcontent { line-height: 140%; text-align: justify; }");
-				WriteLine(hFile, "\tdiv.newsitemcontent ol, div.newsitemcontent ul { list-style-position: inside;}");
+				WriteLine(hFile, "\tdiv.newsitemcontent ol, div.newsitemcontent ul { list-style-position: inside; }");
 				WriteLine(hFile, "\tdiv.newsitemtitle { font-weight: bold; margin-bottom: 8px }");
-				WriteLine(hFile, "\tdiv.newsitemfooter { color: gray; font-size: xx-small; text-align: left; margin-top: 6px; margin-bottom: 18px; }");
-				WriteLine(hFile, "");
 				WriteLine(hFile, "\tdiv.newsitemtitle a, div.newsitemcontent a, div.newsitemfooter a { text-decoration: none; }");
-				WriteLine(hFile, "</style><style>");
-				WriteLine(hFile, "\tdiv.newspapertitle { margin-bottom: 12px; border-bottom: 1px dashed silver; }");
+				WriteLine(hFile, "\tdiv.newsitemfooter { color: gray; font-size: xx-small; text-align: left; margin-top: 6px; margin-bottom: 18px; }");
 				WriteLine(hFile, "</style>");
 				WriteLine(hFile, "</head>");
 				WriteLine(hFile, "<body>");
+
+				if(feeddata != NULL)
+				{
+					CAtlString tmp;
+					tmp.Format("\t<div class=\"newspapertitle\"><a href=\"%s\">%s</a> - %s</div>", feeddata->m_link, feeddata->m_title, feeddata->m_description);
+					WriteLine(hFile, tmp);
+				}
+				else if(folderdata != NULL)
+				{
+					CAtlString tmp;
+					tmp.Format("\t<div class=\"newspapertitle\">%s</div>", folderdata->m_name);
+					WriteLine(hFile, tmp);
+				}
+				else
+				{
+					WriteLine(hFile, "\t<div class=\"newspapertitle\">Headlines</div>");
+				}
 
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
@@ -1186,11 +1231,11 @@ public:
 							WriteLine(hFile, "<table width=\"100%\"><tr><td width=\"10%\">&nbsp;</td><td width=\"75%\">");
 
 						CAtlString tmp;
-						tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>\n", (const char*)(_bstr_t)recordset->Fields->GetItem("News.URL")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("Title")->Value);
+						tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>", (const char*)(_bstr_t)recordset->Fields->GetItem("News.URL")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value);
 						WriteLine(hFile, tmp);
-						tmp.Format("\t<div class=\"newsitemcontent\">%s</div>\n", (const char*)(_bstr_t)recordset->Fields->GetItem("Description")->Value);
+						tmp.Format("\t<div class=\"newsitemcontent\">%s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value);
 						WriteLine(hFile, tmp);
-						tmp.Format("\t<div class=\"newsitemfooter\">%s - Received %s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("Name")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("Issued")->Value);
+						tmp.Format("\t<div class=\"newsitemfooter\">%s - Received %s</div>", (const char*)(_bstr_t)recordset->Fields->GetItem("Feeds.Title")->Value, (const char*)(_bstr_t)recordset->Fields->GetItem("Issued")->Value);
 						WriteLine(hFile, tmp);
 
 						if(x % 2 == 0)
@@ -1241,13 +1286,13 @@ public:
 			if(isFeed)
 			{
 				FeedData* feeddata = dynamic_cast<FeedData*>(treedata);
-				feeddata->m_name = pTVDI->item.pszText;
+				feeddata->m_title = pTVDI->item.pszText;
 				CComPtr<ADODB::_Command> command;
 				command.CoCreateInstance(CComBSTR("ADODB.Command"));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE Feeds SET Name=? WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(feeddata->m_name)));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(feeddata->m_title)));
 				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
 				CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 				return TRUE;
@@ -1314,47 +1359,31 @@ public:
 					WriteLine(hFile, "<html>");
 					WriteLine(hFile, "<head>");
 					WriteLine(hFile, "<META http-equiv=\"Content-Type\" content=\"text/html\">");
-					WriteLine(hFile, "<title>News Item</title>");
+					WriteLine(hFile, "<title>FeedIt</title>");
 					WriteLine(hFile, "<style type=\"text/css\">");
-					// WriteLine(hFile, "\thtml { border: 6px solid gray; }");
+					WriteLine(hFile, "\thtml { border: 4px solid gray; }");
 					WriteLine(hFile, "\tbody { background-color: white; color: black; font: 84% Verdana, Arial, sans-serif; margin: 12px 22px; }");
+					WriteLine(hFile, "\ttable { font: 100% Verdana, Arial, sans-serif; }");
 					WriteLine(hFile, "\ta { color: #0002CA; }");
 					WriteLine(hFile, "\ta:hover { color: #6B8ADE; text-decoration: underline; }");
-					WriteLine(hFile, "\tspan.nodescription {	color: silver;	font-size: smaller; }");
 					WriteLine(hFile, "");
 					WriteLine(hFile, "\th1,h2,h3,h4,h5,h6 { font-size: 80%; font-weight: bold; font-style: italic;	}");
 					WriteLine(hFile, "");
-					WriteLine(hFile, "\tdiv.favchannel {");
-					WriteLine(hFile, "\t\toverflow: hidden;");
-					WriteLine(hFile, "\t\tborder: 1px solid #6B8ADE;");
-					WriteLine(hFile, "\t\tbackground-color: #D6DFF7;");
-					WriteLine(hFile, "\t\tfloat: left;");
-					WriteLine(hFile, "\t\tmargin: 0 14px 10px 0;");
-					WriteLine(hFile, "\t\tpadding: 16px 16px 0 16px; width: 40%;");
-					WriteLine(hFile, "\t}");
+					WriteLine(hFile, "\tdiv.newspapertitle { font-weight: bold; font-size: 120%; text-align: center; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed silver; }");
 					WriteLine(hFile, "");
-					WriteLine(hFile, "\tdiv.newspapertitle { font-weight: bold; font-size: 120%; text-align: center; padding-bottom: 12px; text-transform: uppercase; }");
-					WriteLine(hFile, "\tdiv.channel { border-bottom: 1px dotted silver; margin-top: 14px}");
-					WriteLine(hFile, "\tdiv.channeltitle { font-weight: bold; text-transform: uppercase; margin-top: 12px; margin-bottom: 18px;}");
-					WriteLine(hFile, "\timg.channel { border: none; }");
-					WriteLine(hFile, "");
-					WriteLine(hFile, "\tdiv.newsitemcontent { line-height: 140%; }");
-					WriteLine(hFile, "\tdiv.newsitemcontent ol, div.newsitemcontent ul { list-style-position: inside;}");
-					WriteLine(hFile, "\tdiv.newsitemtitle { font-weight: bold; margin-bottom: 8px }");
-					WriteLine(hFile, "\tdiv.newsitemfooter { color: gray; font-size: xx-small; text-align: left; margin-top: 6px; margin-bottom: 18px; }");
-					WriteLine(hFile, "");
+					WriteLine(hFile, "\tdiv.newsitemcontent { line-height: 140%; text-align: justify; }");
+					WriteLine(hFile, "\tdiv.newsitemcontent ol, div.newsitemcontent ul { list-style-position: inside; }");
+					WriteLine(hFile, "\tdiv.newsitemtitle { font-weight: bold; border-bottom: 1px dotted silver; margin-bottom: 10px; padding-bottom: 10px; }");
 					WriteLine(hFile, "\tdiv.newsitemtitle a, div.newsitemcontent a, div.newsitemfooter a { text-decoration: none; }");
-					WriteLine(hFile, "</style><style>");
-					WriteLine(hFile, "\tdiv.newsitemtitle { border-bottom: 1px dotted silver; margin-bottom: 10px; padding-bottom: 10px;}");
-					WriteLine(hFile, "\tdiv.newsitemfooter { text-align: right; margin-top: 14px; padding-top: 6px; border-top: 1px dashed #CBCBCB; }");
+					WriteLine(hFile, "\tdiv.newsitemfooter { color: gray; font-size: xx-small; text-align: right; margin-top: 14px; padding-top: 6px; border-top: 1px dashed #CBCBCB; }");
 					WriteLine(hFile, "</style>");
 					WriteLine(hFile, "</head>");
 					WriteLine(hFile, "<body>");
-					tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>\n", (const char*)newsdata->m_url, (const char*)newsdata->m_title);
+					tmp.Format("\t<div class=\"newsitemtitle\"><a href=\"%s\">%s</a></div>", (const char*)newsdata->m_url, (const char*)newsdata->m_title);
 					WriteLine(hFile, tmp);
-					tmp.Format("\t<div class=\"newsitemcontent\">%s</div>\n", (const char*)newsdata->m_description);
+					tmp.Format("\t<div class=\"newsitemcontent\">%s</div>", (const char*)newsdata->m_description);
 					WriteLine(hFile, tmp);
-					tmp.Format("\t<div class=\"newsitemfooter\">%s<br>Received %s</div>", (const char*)feeddata->m_name, (const char*)newsdata->m_issued);
+					tmp.Format("\t<div class=\"newsitemfooter\">%s - Received %s</div>", (const char*)feeddata->m_title, (const char*)newsdata->m_issued);
 					WriteLine(hFile, tmp);
 					WriteLine(hFile, "</body>");
 					WriteLine(hFile, "</html>");
@@ -1424,7 +1453,7 @@ public:
 		{
 			CFeedParser fp(dlg.m_value);
 
-			if(fp.m_feedType != CFeedParser::FPFT_UNKNOWN)
+			if(fp.m_type != CFeedParser::FPFT_UNKNOWN)
 			{
 				CComPtr<ADODB::_Recordset> recordset;
 				recordset.CoCreateInstance(CComBSTR("ADODB.Recordset"));
@@ -1433,7 +1462,7 @@ public:
 				recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 				recordset->AddNew();
 				recordset->Fields->GetItem("FolderID")->Value = 0;
-				recordset->Fields->GetItem("Name")->Value = _bstr_t(fp.m_feedName);
+				recordset->Fields->GetItem("Title")->Value = _bstr_t(fp.m_title);
 				recordset->Fields->GetItem("URL")->Value = _bstr_t(dlg.m_value);
 				recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
 				recordset->Fields->GetItem("RefreshInterval")->Value = 60;
@@ -1442,9 +1471,9 @@ public:
 				recordset->Update();
 				FeedData* itemdata = new FeedData();
 				itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
-				itemdata->m_name = fp.m_feedName;
+				itemdata->m_title = fp.m_title;
 				itemdata->m_unread = 0;
-				HTREEITEM item = m_treeView.InsertItem(fp.m_feedName, m_feedsRoot, TVI_LAST);
+				HTREEITEM item = m_treeView.InsertItem(fp.m_title, m_feedsRoot, TVI_LAST);
 				m_treeView.SetItemImage(item, 0, 0);
 				m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
 				m_treeView.SortChildren(m_feedsRoot, TRUE);
@@ -1554,7 +1583,7 @@ public:
 			{
 				recordset->MoveFirst();
 				CFeedPropertySheet sheet("Feed properties", 0);
-				sheet.m_propertiesPage.m_name = recordset->Fields->GetItem("Name")->Value;
+				sheet.m_propertiesPage.m_title = recordset->Fields->GetItem("Title")->Value;
 				sheet.m_propertiesPage.m_url = recordset->Fields->GetItem("URL")->Value;
 				sheet.m_propertiesPage.m_update = recordset->Fields->GetItem("RefreshInterval")->Value;
 				sheet.m_propertiesPage.m_retain = recordset->Fields->GetItem("MaxAge")->Value;
@@ -1567,16 +1596,16 @@ public:
 					ATLASSERT(subcommand != NULL);
 					subcommand->ActiveConnection = m_connection;
 					subcommand->CommandText = "UPDATE Feeds SET Name=?, URL=?, RefreshInterval=?, MaxAge=?, NavigateURL=? WHERE ID=?";
-					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_name)));
+					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_title)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_url)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_update)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_retain)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(sheet.m_propertiesPage.m_browse)));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(feeddata->m_id)));
 					CComPtr<ADODB::_Recordset> subrecordset = subcommand->Execute(NULL, NULL, 0);
-					feeddata->m_name = sheet.m_propertiesPage.m_name;
+					feeddata->m_title = sheet.m_propertiesPage.m_title;
 					feeddata->m_navigateURL = sheet.m_propertiesPage.m_browse;
-					m_treeView.SetItemText(i, feeddata->m_name);
+					m_treeView.SetItemText(i, feeddata->m_title);
 					m_treeView.SortChildren(m_feedsRoot, TRUE);
 				}
 			}

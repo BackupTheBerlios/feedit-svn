@@ -362,6 +362,7 @@ public:
 
 		if(nodes != NULL && nodes->length > 0)
 		{
+			CComPtr<MSXML2::IXMLDOMNode> baseurlnode = xmldocument->selectSingleNode(_bstr_t("/atom:feed/atom:link[@rel=\"alternate\"]/@href"));
 			CComPtr<MSXML2::IXMLDOMNode> node;
 
 			while((node = nodes->nextNode()) != NULL)
@@ -372,8 +373,8 @@ public:
 				CComPtr<MSXML2::IXMLDOMNode> datenode = node->selectSingleNode(_bstr_t("atom:issued"));
 				TCHAR buf[1024];
 				DWORD buflen = 1024;
-				AtlCombineUrl(url, urlnode->text, buf, &buflen);
-				AddNewsToFeed(feedid, titlenode->text, url, descriptionnode->xml, datenode->text);
+				AtlCombineUrl(baseurlnode->text, urlnode->text, buf, &buflen, ATL_URL_NO_ENCODE);
+				AddNewsToFeed(feedid, titlenode->text, buf, descriptionnode->xml, datenode->text);
 			}
 
 			return;

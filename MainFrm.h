@@ -80,7 +80,7 @@ public:
 			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultMaxAge', '30')"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Folders (Name) VALUES ('Sample feeds')"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastError VARCHAR(255) NOT NULL DEFAULT '', Link VARCHAR(255) NOT NULL DEFAULT '', ImageLink VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
+			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) UNIQUE NOT NULL, LastError VARCHAR(255) NOT NULL DEFAULT '', Link VARCHAR(255) NOT NULL DEFAULT '', ImageLink VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
@@ -1659,6 +1659,35 @@ public:
 		return 0;
 	}
 
+	int AddNewFeed(const char* url, const char* title)
+	{
+		int id = 0;
+
+		try
+		{
+			ADODB::_RecordsetPtr recordset;
+			recordset.CreateInstance(__uuidof(ADODB::Recordset));
+			ATLASSERT(recordset != NULL);
+			recordset->CursorLocation = ADODB::adUseServer;
+			recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+			recordset->AddNew();
+			recordset->Fields->GetItem("FolderID")->Value = 0;
+			recordset->Fields->GetItem("Title")->Value = _bstr_t(title);
+			recordset->Fields->GetItem("URL")->Value = _bstr_t(url);
+			recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
+			recordset->Fields->GetItem("RefreshInterval")->Value = 60;
+			recordset->Fields->GetItem("MaxAge")->Value = 0;
+			recordset->Fields->GetItem("NavigateURL")->Value = _bstr_t("0");
+			recordset->Update();
+			id = recordset->Fields->GetItem("ID")->Value;
+		}
+		catch(...)
+		{
+		}
+
+		return id;
+	}
+
 	LRESULT OnFileNewFeed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		CStringDlg dlg(_T("Enter feed URL:"));
@@ -1670,32 +1699,27 @@ public:
 
 			if(fp.m_type != CFeedParser::FPFT_UNKNOWN)
 			{
-				ADODB::_RecordsetPtr recordset;
-				recordset.CreateInstance(__uuidof(ADODB::Recordset));
-				ATLASSERT(recordset != NULL);
-				recordset->CursorLocation = ADODB::adUseServer;
-				recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
-				recordset->AddNew();
-				recordset->Fields->GetItem("FolderID")->Value = 0;
-				recordset->Fields->GetItem("Title")->Value = _bstr_t(fp.m_title);
-				recordset->Fields->GetItem("URL")->Value = _bstr_t(dlg.m_value);
-				recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
-				recordset->Fields->GetItem("RefreshInterval")->Value = 60;
-				recordset->Fields->GetItem("MaxAge")->Value = 0;
-				recordset->Fields->GetItem("NavigateURL")->Value = _bstr_t("0");
-				recordset->Update();
-				FeedData* itemdata = new FeedData();
-				itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
-				itemdata->m_title = fp.m_title;
-				itemdata->m_unread = 0;
-				HTREEITEM item = m_treeView.InsertItem(fp.m_title, m_feedsRoot, TVI_LAST);
-				m_treeView.SetItemImage(item, 0, 0);
-				m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
-				m_treeView.SortChildren(m_feedsRoot, TRUE);
-				m_treeView.Expand(m_feedsRoot);
-				LARGE_INTEGER liDueTime;
-				liDueTime.QuadPart = -10000 * 10;
-				::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+				int id = AddNewFeed(dlg.m_value, fp.m_title);
+
+				if(id > 0)
+				{
+					FeedData* itemdata = new FeedData();
+					itemdata->m_id = id;
+					itemdata->m_title = fp.m_title;
+					itemdata->m_unread = 0;
+					HTREEITEM item = m_treeView.InsertItem(fp.m_title, m_feedsRoot, TVI_LAST);
+					m_treeView.SetItemImage(item, 0, 0);
+					m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
+					m_treeView.SortChildren(m_feedsRoot, TRUE);
+					m_treeView.Expand(m_feedsRoot);
+					LARGE_INTEGER liDueTime;
+					liDueTime.QuadPart = -10000 * 10;
+					::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+				}
+				else
+				{
+					AtlMessageBox(m_hWnd, "You have already joined this feed", "Error", MB_OK | MB_ICONERROR);
+				}
 			}
 			else
 			{
@@ -1921,6 +1945,68 @@ public:
 
 	LRESULT OnFileImportOPML(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
+		CFileDialog fd(TRUE, NULL, NULL, 0, "OPML File (*.opml)\0*.opml\0All files (*.*)\0*.*\0\0");
+
+		if(fd.DoModal() == IDOK)
+		{
+			MSXML2::IXMLDOMDocument2Ptr xmldocument;
+			xmldocument.CreateInstance(_uuidof(MSXML2::DOMDocument));
+			ATLASSERT(xmldocument != NULL);
+			xmldocument->async = FALSE;
+			xmldocument->load(fd.m_szFileName);
+
+			if(xmldocument->parseError->errorCode != 0)
+			{
+				CAtlString tmp;
+				tmp.Format("There was an error while reading OPML file.\nThe error is: %s", xmldocument->parseError->reason);
+				AtlMessageBox(m_hWnd, tmp.GetBuffer(), "Error", MB_OK | MB_ICONERROR);
+				return 0;
+			}
+
+			MSXML2::IXMLDOMNodeListPtr nodes = xmldocument->selectNodes(_bstr_t("//outline[@type=\"rss\"]"));
+
+			if(nodes != NULL && nodes->length > 0)
+			{
+				MSXML2::IXMLDOMNodePtr node;
+
+				while((node = nodes->nextNode()) != NULL)
+				{
+					MSXML2::IXMLDOMNodePtr urlnode = node->selectSingleNode(_bstr_t("@xmlUrl"));
+					MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("@title"));
+					CAtlString url;
+					CAtlString title;
+
+					if(urlnode != NULL)
+						url = (LPTSTR)urlnode->text;
+
+					if(titlenode != NULL)
+						title = (LPTSTR)titlenode->text;
+
+					if(url.GetLength() > 0 && title.GetLength() > 0)
+					{
+						int id = AddNewFeed(url, title);
+
+						if(id > 0)
+						{
+							FeedData* itemdata = new FeedData();
+							itemdata->m_id = id;
+							itemdata->m_title = title;
+							itemdata->m_unread = 0;
+							HTREEITEM item = m_treeView.InsertItem(title, m_feedsRoot, TVI_LAST);
+							m_treeView.SetItemImage(item, 0, 0);
+							m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
+							m_treeView.SortChildren(m_feedsRoot, TRUE);
+							m_treeView.Expand(m_feedsRoot);
+						}
+					}
+				}
+
+				LARGE_INTEGER liDueTime;
+				liDueTime.QuadPart = -10000 * 10;
+				::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+			}
+		}
+
 		return 0;
 	}
 

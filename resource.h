@@ -13,7 +13,6 @@
 #define IDB_LIST_IMAGELIST              204
 #define IDR_TRAY_POPUP                  205
 #define IDR_TREE_POPUP                  207
-#define IDR_TREE_POPUP1                 208
 #define IDR_LIST_POPUP                  208
 #define IDC_PROMPT                      1000
 #define IDC_STRING                      1001
@@ -30,17 +29,19 @@
 #define ID_FILE_DELETE                  32774
 #define ID_SHOW                         32778
 #define ID_ACTIONS_MARKREAD             32779
+#define ID_ACTIONS_MARKUNREAD           32780
 #define ID_ACTIONS_BACK                 32784
 #define ID_ACTIONS_FORWARD              32785
 #define ID_VIEW_PROPERTIES              32789
 #define ID_ACTIONS_SENDMAIL             32794
+#define ID_ACTIONS_MARKALLREAD          32798
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        209
-#define _APS_NEXT_COMMAND_VALUE         32798
+#define _APS_NEXT_COMMAND_VALUE         32805
 #define _APS_NEXT_CONTROL_VALUE         1012
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

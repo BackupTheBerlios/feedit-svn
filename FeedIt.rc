@@ -61,7 +61,7 @@ BEGIN
     SEPARATOR
     BUTTON      ID_VIEW_PROPERTIES
     SEPARATOR
-    BUTTON      ID_ACTIONS_MARKREAD
+    BUTTON      ID_ACTIONS_MARKALLREAD
     BUTTON      ID_ACTIONS_SENDMAIL
     SEPARATOR
     BUTTON      ID_ACTIONS_BACK
@@ -96,8 +96,11 @@ BEGIN
     END
     POPUP "&Actions"
     BEGIN
-        MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKREAD
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
+        MENUITEM "Mark as r&ead",               ID_ACTIONS_MARKREAD
+        MENUITEM "Mark as &unread",             ID_ACTIONS_MARKUNREAD
+        MENUITEM SEPARATOR
+        MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKALLREAD
         MENUITEM SEPARATOR
         MENUITEM "&Back",                       ID_ACTIONS_BACK
         MENUITEM "&Forward",                    ID_ACTIONS_FORWARD
@@ -129,6 +132,7 @@ IDR_TREE_POPUP MENU
 BEGIN
     POPUP ""
     BEGIN
+        MENUITEM "Mark all read\tCtrl+R",       ID_ACTIONS_MARKALLREAD
         MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
         MENUITEM SEPARATOR
         MENUITEM "&Delete\tDel",                ID_FILE_DELETE
@@ -140,6 +144,8 @@ BEGIN
     POPUP ""
     BEGIN
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
+        MENUITEM "Mark as r&ead",               ID_ACTIONS_MARKREAD
+        MENUITEM "Mark as &unread",             ID_ACTIONS_MARKUNREAD
     END
 END
 
@@ -254,14 +260,14 @@ END
 
 IDR_MAINFRAME ACCELERATORS 
 BEGIN
-    "R",            ID_ACTIONS_MARKREAD,    VIRTKEY, CONTROL, NOINVERT
+    "R",            ID_ACTIONS_MARKALLREAD, VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_ACTIONS_SENDMAIL,    VIRTKEY, CONTROL, NOINVERT
     VK_DELETE,      ID_FILE_DELETE,         VIRTKEY, NOINVERT
     "N",            ID_FILE_NEW_FEED,       VIRTKEY, CONTROL, NOINVERT
     "F",            ID_FILE_NEW_FOLDER,     VIRTKEY, CONTROL, NOINVERT
     VK_TAB,         ID_NEXT_PANE,           VIRTKEY, NOINVERT
     VK_TAB,         ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
     "P",            ID_VIEW_PROPERTIES,     VIRTKEY, CONTROL, NOINVERT
-    "S",            ID_ACTIONS_SENDMAIL,    VIRTKEY, CONTROL, NOINVERT
 END
 
 
@@ -403,13 +409,17 @@ BEGIN
     ID_FILE_NEW_FOLDER      "Add new folder\nNew folder"
     ID_FILE_DELETE          "Delete current item\nDelete"
     ID_SHOW                 "Show application window\nShow"
-    ID_ACTIONS_MARKREAD     "Mark all items as read\nMark Read"
+    ID_ACTIONS_MARKREAD     "Mark item as read\nMark as read"
+    ID_ACTIONS_MARKUNREAD   "Mark item as unread\nMark as unread"
 END
 
 STRINGTABLE 
 BEGIN
+    ID_ACTIONS_BACK         "Navigate back\nBack"
+    ID_ACTIONS_FORWARD      "Navigate forward\nForward"
     ID_VIEW_PROPERTIES      "Edit item properties\nProperties"
     ID_ACTIONS_SENDMAIL     "Send item by email\nSend by email"
+    ID_ACTIONS_MARKALLREAD  "Mark all items as read\nMark all read"
 END
 
 #endif    // English (U.S.) resources

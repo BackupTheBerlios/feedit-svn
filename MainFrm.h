@@ -306,14 +306,34 @@ public:
 			UISetState(ID_VIEW_PROPERTIES, UPDUI_DISABLED);
 
 		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
-			UISetState(ID_ACTIONS_MARKREAD, UPDUI_ENABLED);
+			UISetState(ID_ACTIONS_MARKALLREAD, UPDUI_ENABLED);
 		else
-			UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
+			UISetState(ID_ACTIONS_MARKALLREAD, UPDUI_DISABLED);
 
-		if(m_listView.GetSelectedIndex() >= 0)
+		int j = m_listView.GetSelectedIndex();
+
+		if(j >= 0)
+		{
 			UISetState(ID_ACTIONS_SENDMAIL, UPDUI_ENABLED);
+			NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(j));
+
+			if(newsdata->m_unread)
+			{
+				UISetState(ID_ACTIONS_MARKREAD, UPDUI_ENABLED);
+				UISetState(ID_ACTIONS_MARKUNREAD, UPDUI_DISABLED);
+			}
+			else
+			{
+				UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
+				UISetState(ID_ACTIONS_MARKUNREAD, UPDUI_ENABLED);
+			}
+		}
 		else
+		{
 			UISetState(ID_ACTIONS_SENDMAIL, UPDUI_DISABLED);
+			UISetState(ID_ACTIONS_MARKREAD, UPDUI_DISABLED);
+			UISetState(ID_ACTIONS_MARKUNREAD, UPDUI_DISABLED);
+		}
 
 		UIUpdateToolBar();
 		return FALSE;
@@ -324,8 +344,10 @@ public:
 		UPDATE_ELEMENT(ID_VIEW_STATUS_BAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_VIEW_PROPERTIES, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
-		UPDATE_ELEMENT(ID_ACTIONS_MARKREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_SENDMAIL, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_ACTIONS_MARKREAD, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_ACTIONS_MARKUNREAD, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_ACTIONS_MARKALLREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_BACK, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_FORWARD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 	END_UPDATE_UI_MAP()
@@ -348,8 +370,10 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
 		COMMAND_ID_HANDLER(ID_VIEW_PROPERTIES, OnViewProperties)
-		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
 		COMMAND_ID_HANDLER(ID_ACTIONS_SENDMAIL, OnActionsSendMail)
+		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
+		COMMAND_ID_HANDLER(ID_ACTIONS_MARKUNREAD, OnActionsMarkUnread)
+		COMMAND_ID_HANDLER(ID_ACTIONS_MARKALLREAD, OnActionsMarkAllRead)
 		COMMAND_ID_HANDLER(ID_ACTIONS_BACK, OnActionsBack)
 		COMMAND_ID_HANDLER(ID_ACTIONS_FORWARD, OnActionsForward)
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
@@ -1345,8 +1369,13 @@ public:
 		::WriteFile(hFile, "\r\n", 2, &written, NULL);
 	}
 
-	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
+	LRESULT OnListSelectionChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	{
+		LPNMLISTVIEW pnmv = (LPNMLISTVIEW)pnmh;
+
+		if((pnmv->uChanged & LVIF_STATE) == 0 || (pnmv->uNewState & LVIS_SELECTED) == 0)
+			return 0;
+
 		int idx = m_listView.GetSelectedIndex();
 		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
 
@@ -1634,6 +1663,60 @@ public:
 		return 0;
 	}
 
+	LRESULT OnActionsMarkRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		int idx = m_listView.GetSelectedIndex();
+		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+		if(newsdata != NULL && newsdata->m_unread)
+		{
+			CComPtr<ADODB::_Command> command;
+			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ATLASSERT(command != NULL);
+			command->ActiveConnection = m_connection;
+			command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
+			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			newsdata->m_unread = false;
+			m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 0, 0, 0, 0);
+			FeedData* feeddata = dynamic_cast<FeedData*>((FeedData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
+			feeddata->m_unread--;
+			CAtlString txt;
+			m_treeView.GetItemText(newsdata->m_feedTreeItem, txt);
+			m_treeView.SetItemText(newsdata->m_feedTreeItem, txt);
+			m_listView.Invalidate();
+		}
+
+		return 0;
+	}
+
+	LRESULT OnActionsMarkUnread(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		int idx = m_listView.GetSelectedIndex();
+		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+		if(newsdata != NULL && !newsdata->m_unread)
+		{
+			CComPtr<ADODB::_Command> command;
+			command.CoCreateInstance(CComBSTR("ADODB.Command"));
+			ATLASSERT(command != NULL);
+			command->ActiveConnection = m_connection;
+			command->CommandText = "UPDATE News SET Unread='1' WHERE ID=?";
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, CComVariant(newsdata->m_id)));
+			CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
+			newsdata->m_unread = true;
+			m_listView.SetItem(idx, 0, LVIF_IMAGE, NULL, 1, 0, 0, 0);
+			FeedData* feeddata = dynamic_cast<FeedData*>((FeedData*)m_treeView.GetItemData(newsdata->m_feedTreeItem));
+			feeddata->m_unread++;
+			CAtlString txt;
+			m_treeView.GetItemText(newsdata->m_feedTreeItem, txt);
+			m_treeView.SetItemText(newsdata->m_feedTreeItem, txt);
+			m_listView.Invalidate();
+		}
+
+		return 0;
+	}
+
 	LRESULT OnActionsSendMail(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		int idx = m_listView.GetSelectedIndex();
@@ -1665,7 +1748,7 @@ public:
 		return 0;
 	}
 
-	LRESULT OnActionsMarkRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	LRESULT OnActionsMarkAllRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		HTREEITEM i = m_treeView.GetSelectedItem();
 		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));

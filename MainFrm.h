@@ -4,6 +4,8 @@
 
 #pragma once
 
+#define REFRESH_INTERVAL (5*60*1000)
+
 class CMainFrame :
 	public CFrameWindowImpl<CMainFrame>,
 	public CUpdateUI<CMainFrame>,
@@ -32,6 +34,7 @@ public:
 	CImageList m_dragImage;
 	int m_downloads;
 	BOOL m_dragging;
+	BOOL m_mustRefresh;
 	HTREEITEM m_feedsRoot;
 	HTREEITEM m_itemDrag;
 	HTREEITEM m_itemDrop;
@@ -40,8 +43,9 @@ public:
 	CWorkerThread<> m_updateThread;
 	HANDLE m_hTimer;
 
-	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_feedsRoot(NULL), m_itemDrag(NULL), m_itemDrop(NULL),
-		m_arrowCursor(LoadCursor(NULL, IDC_ARROW)), m_noCursor(LoadCursor(NULL, IDC_NO))
+	CMainFrame() : m_downloads(0), m_dragging(FALSE), m_mustRefresh(FALSE), m_feedsRoot(NULL),
+		m_itemDrag(NULL), m_itemDrop(NULL), m_arrowCursor(LoadCursor(NULL, IDC_ARROW)),
+		m_noCursor(LoadCursor(NULL, IDC_NO))
 	{
 		::SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, m_dbPath);
 		::PathAppend(m_dbPath, "FeedIt");
@@ -62,7 +66,7 @@ public:
 			connection.CoCreateInstance(CComBSTR("ADODB.Connection"));
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
 			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
-			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, StoreInterval INTEGER NOT NULL)"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Name VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
 		}
 	}
@@ -75,8 +79,48 @@ public:
 		return FALSE;
 	}
 
+	void RefreshTree(HTREEITEM root = NULL)
+	{
+		if(root == NULL)
+		{
+			root = m_feedsRoot;
+		}
+
+		HTREEITEM i = m_treeView.GetChildItem(root);
+
+		while(i != NULL)
+		{
+			FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+
+			if(i != NULL)
+			{
+				feeddata->m_unread = GetUnreadItemCount(feeddata->m_id);
+			}
+			else
+			{
+				RefreshTree(i);
+			}
+
+			i = m_treeView.GetNextSiblingItem(i);
+		}
+
+		if(root == m_feedsRoot)
+		{
+			m_treeView.Invalidate();
+		}
+	}
+
 	virtual BOOL OnIdle()
 	{
+		if(m_mustRefresh)
+		{
+			RefreshTree();
+			m_mustRefresh = FALSE;
+			LARGE_INTEGER liDueTime;
+			liDueTime.QuadPart = -10000 * (__int64) REFRESH_INTERVAL;
+			::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
+		}
+
 		HTREEITEM i = m_treeView.GetSelectedItem();
 
 		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
@@ -171,6 +215,7 @@ public:
 			}
 		}
 
+		m_mustRefresh = TRUE;
 		::CoUninitialize();
 		return S_OK;
 	}
@@ -573,7 +618,11 @@ public:
 		pLoop->AddIdleHandler(this);
 
 		m_updateThread.Initialize();
-		m_updateThread.AddTimer(10000, this, NULL, &m_hTimer);
+		m_hTimer = ::CreateWaitableTimer(NULL, FALSE, NULL);
+		m_updateThread.AddHandle(m_hTimer, this, NULL);
+		LARGE_INTEGER liDueTime;
+		liDueTime.QuadPart = -10000 * (__int64) REFRESH_INTERVAL;
+		::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
 
 		HICON hIconSmall = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
 		InstallIcon(_T("FeedIt"), hIconSmall, IDR_TRAY_POPUP);
@@ -898,7 +947,8 @@ public:
 			recordset->Fields->GetItem("URL")->Value = _bstr_t(dlg.m_value);
 			recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
 			recordset->Fields->GetItem("RefreshInterval")->Value = 60;
-			recordset->Fields->GetItem("StoreInterval")->Value = 0;
+			recordset->Fields->GetItem("MaxAge")->Value = 0;
+			recordset->Fields->GetItem("NavigateURL")->Value = _bstr_t("1");
 			recordset->Update();
 			FeedData* itemdata = new FeedData();
 			itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
@@ -909,6 +959,9 @@ public:
 			m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
 			m_treeView.SortChildren(m_feedsRoot, TRUE);
 			m_treeView.Expand(m_feedsRoot);
+			LARGE_INTEGER liDueTime;
+			liDueTime.QuadPart = -10000 * 10;
+			::SetWaitableTimer(m_hTimer, &liDueTime, 0,  NULL, NULL, FALSE);
 		}
 
 		return 0;

@@ -5,6 +5,7 @@
 #define IDD_STRING                      5
 #define IDD_ABOUTBOX                    100
 #define IDD_FEED_PROPERTIES_PAGE        106
+#define IDD_OPTIONS_PAGE                107
 #define IDR_MAINFRAME                   128
 #define IDR_PROGRESS                    200
 #define IDC_TREE                        201
@@ -23,7 +24,10 @@
 #define IDC_FEED_RETAIN                 1010
 #define IDC_FEED_BROWSE_DEFAULT         1011
 #define IDC_FEED_BROWSE_SUMMARY         1012
+#define IDC_OPTIONS_AUTOSTART           1012
 #define IDC_FEED_BROWSE_LINK            1013
+#define IDC_OPTIONS_UPDATE              1013
+#define IDC_OPTIONS_RETAIN              1014
 #define ID_FILE_NEW_FEED                32772
 #define ID_FILE_NEW_FOLDER              32773
 #define ID_FILE_DELETE                  32774
@@ -37,14 +41,15 @@
 #define ID_ACTIONS_MARKALLREAD          32798
 #define ID_ACTIONS_MARKFLAGGED          32806
 #define ID_ACTIONS_MARKUNFLAGGED        32808
+#define ID_VIEW_OPTIONS                 32809
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        209
-#define _APS_NEXT_COMMAND_VALUE         32809
-#define _APS_NEXT_CONTROL_VALUE         1012
+#define _APS_NEXT_COMMAND_VALUE         32810
+#define _APS_NEXT_CONTROL_VALUE         1015
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

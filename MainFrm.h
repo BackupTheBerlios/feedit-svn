@@ -391,6 +391,7 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
 		COMMAND_ID_HANDLER(ID_VIEW_PROPERTIES, OnViewProperties)
+		COMMAND_ID_HANDLER(ID_VIEW_OPTIONS, OnViewOptions)
 		COMMAND_ID_HANDLER(ID_ACTIONS_SENDMAIL, OnActionsSendMail)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKUNREAD, OnActionsMarkUnread)
@@ -654,6 +655,20 @@ public:
 		}
 
 		return def;
+	}
+
+	void SetConfiguration(const char* name, int val)
+	{
+		CComPtr<ADODB::_Command> command;
+		command.CoCreateInstance(CComBSTR("ADODB.Command"));
+		ATLASSERT(command != NULL);
+		command->ActiveConnection = m_connection;
+		command->CommandText = "UPDATE Configuration SET CurrentValue=? WHERE Name=?";
+		CAtlString valstr;
+		valstr.Format("%d", val);
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(valstr)));
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, CComVariant(name)));
+		CComPtr<ADODB::_Recordset> recordset = command->Execute(NULL, NULL, 0);
 	}
 
 	int GetUnreadItemCount(int feedid)
@@ -1693,6 +1708,39 @@ public:
 					m_treeView.SetItemText(i, feeddata->m_title);
 					m_treeView.SortChildren(m_feedsRoot, TRUE);
 				}
+			}
+		}
+
+		return 0;
+	}
+
+	LRESULT OnViewOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		CRegKey reg;
+		DWORD err = reg.Create(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run");
+
+		if(err == ERROR_SUCCESS)
+		{
+			COptionsPropertySheet sheet("Options", 0);
+			TCHAR buf[1024];
+			ULONG len = 1024;
+			sheet.m_optionsPage.m_autostart = (reg.QueryStringValue("FeedIt", buf, &len) == ERROR_SUCCESS);
+			sheet.m_optionsPage.m_update = GetConfiguration("DefaultRefreshInterval", 60);
+			sheet.m_optionsPage.m_retain = GetConfiguration("DefaultMaxAge", 30);
+
+			if(sheet.DoModal() == IDOK)
+			{
+				::GetModuleFileName(NULL, buf, 1024);
+				CAtlString tmp;
+				tmp.Format("\"%s\" /background", buf);
+
+				if(sheet.m_optionsPage.m_autostart)
+					reg.SetStringValue("FeedIt", tmp);
+				else
+					reg.DeleteValue("FeedIt");
+
+				SetConfiguration("DefaultRefreshInterval", sheet.m_optionsPage.m_update);
+				SetConfiguration("DefaultMaxAge", sheet.m_optionsPage.m_retain);
 			}
 		}
 

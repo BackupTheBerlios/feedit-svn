@@ -113,6 +113,7 @@ BEGIN
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
         MENUITEM SEPARATOR
         MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
+        MENUITEM "&Options...",                 ID_VIEW_OPTIONS
     END
     POPUP "&Help"
     BEGIN
@@ -216,6 +217,22 @@ BEGIN
                     51,110,28,10
 END
 
+IDD_OPTIONS_PAGE DIALOGEX 0, 0, 210, 154
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Options"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    CONTROL         "Automatically start at logon",IDC_OPTIONS_AUTOSTART,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,7,104,10
+    GROUPBOX        "Defaults",IDC_STATIC,8,23,195,51
+    LTEXT           "Update:",IDC_STATIC,19,37,27,8
+    COMBOBOX        IDC_OPTIONS_UPDATE,56,37,136,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Retain:",IDC_STATIC,19,52,24,8
+    COMBOBOX        IDC_OPTIONS_RETAIN,56,52,136,30,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -252,6 +269,19 @@ BEGIN
         HORZGUIDE, 39
         HORZGUIDE, 55
         HORZGUIDE, 71
+    END
+
+    IDD_OPTIONS_PAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        VERTGUIDE, 19
+        VERTGUIDE, 56
+        VERTGUIDE, 192
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+        HORZGUIDE, 37
+        HORZGUIDE, 52
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -430,6 +460,7 @@ STRINGTABLE
 BEGIN
     ID_ACTIONS_MARKFLAGGED  "Mark item as flagged\nMark as flagged"
     ID_ACTIONS_MARKUNFLAGGED "Mark item as unflagged\nMark as unflagged"
+    ID_VIEW_OPTIONS         "Edit program options\nOptions"
 END
 
 #endif    // English (U.S.) resources

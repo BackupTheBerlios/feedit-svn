@@ -18,19 +18,24 @@
 #include "CustomListView.h"
 #include "TrayIcon.h"
 #include "Settings.h"
+#include "Options.h"
 #include "FeedProps.h"
 #include "MainFrm.h"
 
 CAppModule _Module;
 
-int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
+int Run(LPTSTR lpstrCmdLine = NULL, int nCmdShow = SW_SHOWDEFAULT)
 {
 	CMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
 
 	CComObjectGlobal<CMainFrame> wndMain;
 
-	// nCmdShow = SW_MINIMIZE;
+	CAtlString cmdline(lpstrCmdLine);
+
+	if(cmdline.Find("/background") >= 0)
+		nCmdShow = SW_MINIMIZE;
+
 	DWORD exstyle = 0;
 
 	if(nCmdShow == SW_MINIMIZE || nCmdShow == SW_SHOWMINIMIZED)

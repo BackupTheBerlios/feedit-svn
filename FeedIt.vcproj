@@ -177,6 +177,9 @@
 				RelativePath=".\MainFrm.h">
 			</File>
 			<File
+				RelativePath=".\Options.h">
+			</File>
+			<File
 				RelativePath=".\resource.h">
 			</File>
 			<File

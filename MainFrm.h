@@ -233,6 +233,8 @@ public:
 		UPDATE_ELEMENT(ID_VIEW_STATUS_BAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_MARKREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_ACTIONS_BACK, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_ACTIONS_FORWARD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 	END_UPDATE_UI_MAP()
 
 	BEGIN_MSG_MAP(CMainFrame)
@@ -250,6 +252,8 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKREAD, OnActionsMarkRead)
+		COMMAND_ID_HANDLER(ID_ACTIONS_BACK, OnActionsBack)
+		COMMAND_ID_HANDLER(ID_ACTIONS_FORWARD, OnActionsForward)
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
@@ -268,6 +272,8 @@ public:
 		SINK_ENTRY_EX(0, SHDocVw::DIID_DWebBrowserEvents2, DISPID_DOWNLOADBEGIN, OnDownloadBegin)
 		SINK_ENTRY_EX(0, SHDocVw::DIID_DWebBrowserEvents2, DISPID_DOWNLOADCOMPLETE, OnDownloadComplete)
 		SINK_ENTRY_EX(0, SHDocVw::DIID_DWebBrowserEvents2, DISPID_PROGRESSCHANGE, OnProgressChange)
+		SINK_ENTRY_EX(0, SHDocVw::DIID_DWebBrowserEvents2, DISPID_COMMANDSTATECHANGE, OnCommandStateChange)
+		SINK_ENTRY_EX(0, SHDocVw::DIID_DWebBrowserEvents2, DISPID_STATUSTEXTCHANGE, OnStatusTextChange)
 	END_SINK_MAP()
 
 	HRESULT CloseHandle(HANDLE hObject)
@@ -1175,6 +1181,18 @@ public:
 		return 0;
 	}
 
+	LRESULT OnActionsBack(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		m_htmlCtrl->GoBack();
+		return 0;
+	}
+
+	LRESULT OnActionsForward(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		m_htmlCtrl->GoForward();
+		return 0;
+	}
+
 	LRESULT OnViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		static BOOL bVisible = TRUE;	// initially visible
@@ -1300,5 +1318,24 @@ public:
 	{
 		m_progressBar.SetRange(0, progressMax);
 		m_progressBar.SetPos(progress);
+	}
+
+	void STDMETHODCALLTYPE OnCommandStateChange(long command, bool enable)
+	{
+		if(command == CSC_NAVIGATEBACK)
+			if(enable)
+				UISetState(ID_ACTIONS_BACK, UPDUI_ENABLED);
+			else
+				UISetState(ID_ACTIONS_BACK, UPDUI_DISABLED);
+		else if(command == CSC_NAVIGATEFORWARD)
+			if(enable)
+				UISetState(ID_ACTIONS_FORWARD, UPDUI_ENABLED);
+			else
+				UISetState(ID_ACTIONS_FORWARD, UPDUI_DISABLED);
+	}
+
+	void STDMETHODCALLTYPE OnStatusTextChange(BSTR text)
+	{
+		m_statusBar.SetPaneText(0, _bstr_t(text));
 	}
 };

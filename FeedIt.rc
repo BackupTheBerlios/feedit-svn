@@ -61,6 +61,9 @@ BEGIN
     SEPARATOR
     BUTTON      ID_ACTIONS_MARKREAD
     SEPARATOR
+    BUTTON      ID_ACTIONS_BACK
+    BUTTON      ID_ACTIONS_FORWARD
+    SEPARATOR
     BUTTON      ID_APP_ABOUT
 END
 
@@ -90,7 +93,10 @@ BEGIN
     END
     POPUP "&Actions"
     BEGIN
-        MENUITEM "Mark &Read\tCtrl+R",          ID_ACTIONS_MARKREAD
+        MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKREAD
+        MENUITEM SEPARATOR
+        MENUITEM "&Back",                       ID_ACTIONS_BACK
+        MENUITEM "&Forward",                    ID_ACTIONS_FORWARD
     END
     POPUP "&View"
     BEGIN

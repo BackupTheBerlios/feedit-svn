@@ -35,10 +35,18 @@ public:
 		m_nid.hWnd = pT->m_hWnd;
 		m_nid.uID = nID;
 		m_nid.hIcon = hIcon;
-		m_nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 		m_nid.uCallbackMessage = WM_TRAYICON;
+		m_nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 		_tcsncpy(m_nid.szTip, lpszToolTip, sizeof(m_nid.szTip));
 		m_bInstalled = Shell_NotifyIcon(NIM_ADD, &m_nid) ? true : false;
+
+		if(m_bInstalled)
+		{
+			m_nid.uFlags = 0;
+			m_nid.uVersion = NOTIFYICON_VERSION;
+			Shell_NotifyIcon(NIM_SETVERSION, &m_nid);
+		}
+
 		return m_bInstalled;
 	}
 
@@ -87,7 +95,7 @@ public:
 		if (wParam != m_nid.uID)
 			return 0;
 		T* pT = static_cast<T*>(this);
-		if (LOWORD(lParam) == WM_RBUTTONUP)
+		if (LOWORD(lParam) == WM_CONTEXTMENU || LOWORD(lParam) == NIN_KEYSELECT)
 		{
 			CMenu oMenu;
 			if (!oMenu.LoadMenu(m_nid.uID))
@@ -105,7 +113,7 @@ public:
 			pT->PostMessage(WM_NULL);
 			oMenu.DestroyMenu();
 		}
-		else if (LOWORD(lParam) == WM_LBUTTONDBLCLK)
+		else if (LOWORD(lParam) == WM_LBUTTONDBLCLK || LOWORD(lParam) == NIN_BALLOONUSERCLICK)
 		{
 			SetForegroundWindow(pT->m_hWnd);
 			CMenu oMenu;

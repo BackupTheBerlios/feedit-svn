@@ -76,6 +76,16 @@ public:
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
 	{
+		if(m_htmlView.IsChild(pMsg->hwnd))
+		{
+			CComPtr<IOleInPlaceActiveObject> pIOAO;
+			m_htmlView.QueryControl(&pIOAO);
+			ATLASSERT(pIOAO != NULL);
+
+			if(pIOAO->TranslateAccelerator(pMsg) == S_OK)
+				return TRUE;
+		}
+
 		if(CFrameWindowImpl<CMainFrame>::PreTranslateMessage(pMsg))
 			return TRUE;
 
@@ -1699,17 +1709,20 @@ public:
 	{
 		if(::GetFocus() == m_treeView.m_hWnd)
 		{
-			m_listView.SetActiveWindow();
 			m_listView.SetFocus();
 		}
 		else if(::GetFocus() == m_listView.m_hWnd)
 		{
-			m_htmlView.SetActiveWindow();
 			m_htmlView.SetFocus();
+			CComPtr<IOleObject> pIOO;
+			m_htmlView.QueryControl(&pIOO);
+			ATLASSERT(pIOO != NULL);
+			CRect rc;
+			m_htmlView.GetClientRect(&rc);
+			pIOO->DoVerb(OLEIVERB_UIACTIVATE, (LPMSG)GetCurrentMessage(), NULL, 0, this->m_hWnd, &rc);
 		}
 		else
 		{
-			m_treeView.SetActiveWindow();
 			m_treeView.SetFocus();
 		}
 
@@ -1720,17 +1733,20 @@ public:
 	{
 		if(::GetFocus() == m_treeView.m_hWnd)
 		{
-			m_htmlView.SetActiveWindow();
 			m_htmlView.SetFocus();
+			CComPtr<IOleObject> pIOO;
+			m_htmlView.QueryControl(&pIOO);
+			ATLASSERT(pIOO != NULL);
+			CRect rc;
+			m_htmlView.GetClientRect(&rc);
+			pIOO->DoVerb(OLEIVERB_UIACTIVATE, (LPMSG)GetCurrentMessage(), NULL, 0, this->m_hWnd, &rc);
 		}
 		else if(::GetFocus() == m_listView.m_hWnd)
 		{
-			m_treeView.SetActiveWindow();
 			m_treeView.SetFocus();
 		}
 		else
 		{
-			m_listView.SetActiveWindow();
 			m_listView.SetFocus();
 		}
 
@@ -1786,7 +1802,12 @@ public:
 
 	HRESULT STDMETHODCALLTYPE TranslateAccelerator(DWORD_PTR hWnd, DWORD nMessage, DWORD_PTR wParam, DWORD_PTR lParam, BSTR bstrGuidCmdGroup, DWORD nCmdID, HRESULT *dwRetVal)
 	{
-		if(nMessage == WM_KEYDOWN && wParam == VK_TAB)
+		*dwRetVal = S_OK;
+
+		if((nMessage == WM_KEYDOWN || nMessage == WM_KEYUP) && (wParam == VK_TAB || wParam == VK_BACK))
+			*dwRetVal = S_FALSE;
+
+		if(wParam == VK_RETURN)
 			*dwRetVal = S_FALSE;
 
 		return S_OK;

@@ -73,20 +73,19 @@ public:
 			connection.CreateInstance(__uuidof(ADODB::Connection));
 			ATLASSERT(connection != NULL);
 			connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath, _bstr_t(), _bstr_t(), 0);
-			ADODB::_RecordsetPtr recordset;
-			recordset = connection->Execute(_bstr_t("CREATE TABLE Configuration (Name VARCHAR(255) UNIQUE NOT NULL, CurrentValue VARCHAR(255) NOT NULL)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DBSchemaVersion', '1')"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultRefreshInterval', '60')"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultMaxAge', '30')"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Folders (Name) VALUES ('Sample feeds')"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) UNIQUE NOT NULL, LastError VARCHAR(255) NOT NULL DEFAULT '', Link VARCHAR(255) NOT NULL DEFAULT '', ImageLink VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
-			recordset = connection->Execute(_bstr_t("CREATE INDEX NewsI1 ON News (FeedID)"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE Configuration (Name VARCHAR(255) UNIQUE NOT NULL, CurrentValue VARCHAR(255) NOT NULL)"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DBSchemaVersion', '1')"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultRefreshInterval', '60')"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultMaxAge', '30')"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE Folders (ID AUTOINCREMENT UNIQUE NOT NULL, Name VARCHAR(255) NOT NULL)"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Folders (Name) VALUES ('Sample feeds')"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE Feeds (ID AUTOINCREMENT UNIQUE NOT NULL, FolderID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) UNIQUE NOT NULL, LastError VARCHAR(255) NOT NULL DEFAULT '', Link VARCHAR(255) NOT NULL DEFAULT '', ImageLink VARCHAR(255) NOT NULL DEFAULT '', Description VARCHAR(255) NOT NULL DEFAULT '', LastUpdate DATETIME NOT NULL, RefreshInterval INTEGER NOT NULL, MaxAge INTEGER NOT NULL, NavigateURL VARCHAR(1) NOT NULL)"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE INDEX NewsI1 ON News (FeedID)"), NULL, 0);
 		}
 	}
 
@@ -211,12 +210,12 @@ public:
 				if(feeddata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 				}
 				else if(folderdata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
 				}
 				else
 				{
@@ -668,7 +667,7 @@ public:
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Feeds WHERE ID=?";
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 		if(!recordset->EndOfFile)
@@ -688,7 +687,7 @@ public:
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Configuration WHERE Name=?";
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(name)));
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, name));
 		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 		if(!recordset->EndOfFile)
@@ -709,9 +708,9 @@ public:
 		command->CommandText = "UPDATE Configuration SET CurrentValue=? WHERE Name=?";
 		CAtlString valstr;
 		valstr.Format("%d", val);
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(valstr)));
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(name)));
-		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)valstr));
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, name));
+		command->Execute(NULL, NULL, 0);
 	}
 
 	int GetUnreadItemCount(int feedid)
@@ -721,7 +720,7 @@ public:
 		ATLASSERT(command != NULL);
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT COUNT(*) AS ItemCount FROM News WHERE FeedID=? AND Unread='1'";
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feedid)));
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feedid));
 		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
 
 		if(!recordset->EndOfFile)
@@ -854,7 +853,7 @@ public:
 				ATLASSERT(subcommand != NULL);
 				subcommand->ActiveConnection = m_connection;
 				subcommand->CommandText = "SELECT * FROM Feeds WHERE FolderID=?";
-				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderitemdata->m_id)));
+				subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderitemdata->m_id));
 				ADODB::_RecordsetPtr subrecordset = subcommand->Execute(NULL, NULL, 0);
 
 				if(!subrecordset->EndOfFile)
@@ -885,6 +884,7 @@ public:
 				}
 
 				m_treeView.Expand(folderitem);
+				m_treeView.SortChildren(folderitem);
 				recordset->MoveNext();
 			}
 		}
@@ -924,7 +924,7 @@ public:
 		}
 
 		m_treeView.Expand(m_feedsRoot);
-		m_treeView.SortChildren(m_feedsRoot, TRUE);
+		m_treeView.SortChildren(m_feedsRoot);
 
 		m_listView.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT);
 		m_listView.AddColumn("Date", 0);
@@ -1101,14 +1101,19 @@ public:
 
 			if(hitem == m_feedsRoot || isFolder)
 			{
+				int folderid = 0;
+
+				if(isFolder)
+					folderid = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(m_itemDrop))->m_id;
+
 				ADODB::_CommandPtr command;
 				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE Feeds SET FolderID=? WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(m_itemDrop))->m_id)));
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(m_itemDrag))->m_id)));
-				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderid));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(m_itemDrag))->m_id));
+				command->Execute(NULL, NULL, 0);
 				m_treeView.Expand(m_itemDrop, TVE_EXPAND);
 				HTREEITEM htiNew = MoveChildItem(m_itemDrag, m_itemDrop, TVI_LAST);
 				m_treeView.DeleteItem(m_itemDrag);
@@ -1242,12 +1247,12 @@ public:
 				if(feeddata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 				}
 				else if(folderdata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
 				}
 				else
 				{
@@ -1389,12 +1394,12 @@ public:
 				if(feeddata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued DESC";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 				}
 				else if(folderdata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued DESC";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
 				}
 				else
 				{
@@ -1490,10 +1495,11 @@ public:
 				command.CreateInstance(__uuidof(ADODB::Command));
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
-				command->CommandText = "UPDATE Feeds SET Name=? WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(feeddata->m_title)));
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(feeddata->m_id)));
-				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+				command->CommandText = "UPDATE Feeds SET Title=? WHERE ID=?";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)feeddata->m_title));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
+				command->Execute(NULL, NULL, 0);
+				m_treeView.PostMessage(TVM_SORTCHILDREN, (WPARAM)FALSE, (LPARAM)m_treeView.GetParentItem(pTVDI->item.hItem));
 				return TRUE;
 			}
 			else if(isFolder)
@@ -1505,13 +1511,12 @@ public:
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE Folders SET Name=? WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, _variant_t(folderdata->m_name)));
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(folderdata->m_id)));
-				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)folderdata->m_name));
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
+				command->Execute(NULL, NULL, 0);
+				m_treeView.PostMessage(TVM_SORTCHILDREN, (WPARAM)FALSE, (LPARAM)m_treeView.GetParentItem(pTVDI->item.hItem));
 				return TRUE;
 			}
-
-			m_treeView.SortChildren(m_feedsRoot, TRUE);
 		}
 
 		return FALSE;
@@ -1605,8 +1610,8 @@ public:
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, newsdata->m_id));
+				command->Execute(NULL, NULL, 0);
 				newsdata->m_unread = false;
 
 				if(newsdata->m_flagged)
@@ -1712,7 +1717,7 @@ public:
 					HTREEITEM item = m_treeView.InsertItem(fp.m_title, m_feedsRoot, TVI_LAST);
 					m_treeView.SetItemImage(item, 0, 0);
 					m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
-					m_treeView.SortChildren(m_feedsRoot, TRUE);
+					m_treeView.SortChildren(m_feedsRoot);
 					m_treeView.Expand(m_feedsRoot);
 					RestartTimer(0);
 				}
@@ -1753,7 +1758,7 @@ public:
 			HTREEITEM item = m_treeView.InsertItem(dlg.m_value, m_feedsRoot, TVI_LAST);
 			m_treeView.SetItemImage(item, 1, 1);
 			m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
-			m_treeView.SortChildren(m_feedsRoot, TRUE);
+			m_treeView.SortChildren(m_feedsRoot);
 			m_treeView.Expand(m_feedsRoot);
 		}
 
@@ -1774,8 +1779,8 @@ public:
 					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "DELETE FROM News WHERE FeedID=?";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
-					ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id));
+					command->Execute(NULL, NULL, 0);
 				}
 
 				{
@@ -1784,8 +1789,8 @@ public:
 					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "DELETE FROM Feeds WHERE ID=?";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
-					ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id));
+					command->Execute(NULL, NULL, 0);
 				}
 			}
 			else if(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
@@ -1795,8 +1800,8 @@ public:
 				ATLASSERT(command != NULL);
 				command->ActiveConnection = m_connection;
 				command->CommandText = "DELETE FROM Folders WHERE ID=?";
-				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i))->m_id)));
-				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i))->m_id));
+				command->Execute(NULL, NULL, 0);
 			}
 
 			delete (TreeData*)m_treeView.GetItemData(i);
@@ -1995,7 +2000,7 @@ public:
 							HTREEITEM item = m_treeView.InsertItem(title, m_feedsRoot, TVI_LAST);
 							m_treeView.SetItemImage(item, 0, 0);
 							m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
-							m_treeView.SortChildren(m_feedsRoot, TRUE);
+							m_treeView.SortChildren(m_feedsRoot);
 							m_treeView.Expand(m_feedsRoot);
 						}
 					}
@@ -2046,11 +2051,11 @@ public:
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, sheet.m_propertiesPage.m_retain));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, sheet.m_propertiesPage.m_browse));
 					subcommand->GetParameters()->Append(subcommand->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
-					ADODB::_RecordsetPtr subrecordset = subcommand->Execute(NULL, NULL, 0);
+					subcommand->Execute(NULL, NULL, 0);
 					feeddata->m_title = sheet.m_propertiesPage.m_title;
 					feeddata->m_navigateURL = sheet.m_propertiesPage.m_browse;
 					m_treeView.SetItemText(i, feeddata->m_title);
-					m_treeView.SortChildren(m_feedsRoot, TRUE);
+					m_treeView.SortChildren(m_treeView.GetParentItem(i));
 				}
 			}
 		}
@@ -2145,8 +2150,8 @@ public:
 			else
 				command->CommandText = "UPDATE News SET Unread='1' WHERE ID=?";
 
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, newsdata->m_id));
+			command->Execute(NULL, NULL, 0);
 			newsdata->m_unread = !newsdata->m_unread;
 
 			if(newsdata->m_flagged)
@@ -2189,8 +2194,8 @@ public:
 			else
 				command->CommandText = "UPDATE News SET Flagged='1' WHERE ID=?";
 
-			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-			ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, newsdata->m_id));
+			command->Execute(NULL, NULL, 0);
 			newsdata->m_flagged = !newsdata->m_flagged;
 
 			if(newsdata->m_flagged)
@@ -2225,8 +2230,8 @@ public:
 					ATLASSERT(command != NULL);
 					command->ActiveConnection = m_connection;
 					command->CommandText = "UPDATE News SET Unread='0' WHERE ID=?";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, _variant_t(newsdata->m_id)));
-					ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, newsdata->m_id));
+					command->Execute(NULL, NULL, 0);
 					newsdata->m_unread = false;
 
 					if(newsdata->m_flagged)

@@ -29,7 +29,13 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 
 	CComObjectGlobal<CMainFrame> wndMain;
 
-	if(wndMain.CreateEx() == NULL)
+	// nCmdShow = SW_MINIMIZE;
+	DWORD exstyle = 0;
+
+	if(nCmdShow == SW_MINIMIZE || nCmdShow == SW_SHOWMINIMIZED)
+		exstyle = WS_EX_TOOLWINDOW;
+
+	if(wndMain.CreateEx(0, 0, 0, exstyle) == NULL)
 	{
 		ATLTRACE(_T("Main window creation failed!\n"));
 		return 0;
@@ -41,6 +47,9 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 		ws.ApplyTo(wndMain, nCmdShow);
 	else
 		wndMain.ShowWindow(nCmdShow);
+
+	if(nCmdShow == SW_MINIMIZE || nCmdShow == SW_SHOWMINIMIZED)
+		wndMain.ShowWindow(SW_HIDE);
 
 	int nRet = theLoop.Run();
 

@@ -1453,7 +1453,7 @@ public:
 		plc.length = sizeof(WINDOWPLACEMENT);
 		GetWindowPlacement(&plc);
 
-		if(plc.showCmd == SW_SHOWMINIMIZED)
+		if(plc.showCmd == SW_SHOWMINIMIZED || plc.showCmd == SW_MINIMIZE)
 		{
 			LONG_PTR exstyle = GetWindowLongPtr(GWL_EXSTYLE);
 			exstyle &= ~WS_EX_TOOLWINDOW;

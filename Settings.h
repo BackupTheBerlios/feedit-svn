@@ -109,19 +109,29 @@ void CWindowSettings::GetFrom(CWindow& Wnd)
 {
 	ATLASSERT(Wnd.IsWindow());
 	Wnd.GetWindowPlacement(&m_WindowPlacement);
+
+	if(m_WindowPlacement.showCmd != SW_SHOWMINIMIZED && m_WindowPlacement.showCmd != SW_MINIMIZE)
+		m_WindowPlacement.flags = 0;
 }
 
-void CWindowSettings::ApplyTo(CWindow& Wnd, int nCmdShow/* = SW_SHOWNORMAL*/)
+void CWindowSettings::ApplyTo(CWindow& Wnd, int nCmdShow)
 {
 	ATLASSERT(Wnd.IsWindow());
 
-	if(m_WindowPlacement.showCmd == SW_MINIMIZE || m_WindowPlacement.showCmd == SW_SHOWMINIMIZED)
+	if(SW_MINIMIZE == nCmdShow || SW_SHOWMINIMIZED == nCmdShow)
+	{
+		if(m_WindowPlacement.showCmd == SW_SHOWMAXIMIZED || m_WindowPlacement.showCmd == SW_MAXIMIZE)
+			m_WindowPlacement.flags = WPF_RESTORETOMAXIMIZED;
+
+		m_WindowPlacement.showCmd = nCmdShow;
+	}
+	else if(m_WindowPlacement.showCmd == SW_MINIMIZE || m_WindowPlacement.showCmd == SW_SHOWMINIMIZED)
 		m_WindowPlacement.showCmd = SW_SHOWNORMAL;
 
 	Wnd.SetWindowPlacement(&m_WindowPlacement);
-	
-	if(SW_SHOWNORMAL != nCmdShow)	
-		Wnd.ShowWindow(nCmdShow);		
+
+	if(SW_MINIMIZE != nCmdShow && SW_SHOWMINIMIZED != nCmdShow && SW_SHOWNORMAL != nCmdShow)
+		Wnd.ShowWindow(nCmdShow);
 }
 
 //////////////////////////////////////////////////////////////////////

@@ -187,8 +187,13 @@ public:
 		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
 
-		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
+		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot || i == m_searchRoot)
 		{
+			CAtlString search;
+
+			if(i == m_searchRoot)
+				m_SrcBar.m_search.GetWindowText(search);
+
 			{
 				CAtlMap<int, bool> entrymap;
 				ADODB::_CommandPtr command;
@@ -219,7 +224,8 @@ public:
 
 					while(!recordset->EndOfFile)
 					{
-						entrymap[(int)recordset->Fields->GetItem("News.ID")->Value] = true;
+						if(i != m_searchRoot || CheckSearchResult(search, CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value), CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value)))
+							entrymap[(int)recordset->Fields->GetItem("News.ID")->Value] = true;
 						recordset->MoveNext();
 					}
 				}
@@ -245,7 +251,8 @@ public:
 
 					while(!recordset->EndOfFile)
 					{
-						if(entrymap.Lookup((int)recordset->Fields->GetItem("News.ID")->Value))
+						if((i != m_searchRoot || CheckSearchResult(search, CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value), CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value)))
+							&& entrymap.Lookup((int)recordset->Fields->GetItem("News.ID")->Value))
 						{
 							NewsData* newsdata = new NewsData();
 							newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
@@ -282,6 +289,9 @@ public:
 					}
 				}
 			}
+
+			if(m_listView.GetSelectedIndex() < 0)
+				ShowSummaryPage();
 		}
 	}
 
@@ -1209,7 +1219,6 @@ public:
 		}
 
 		m_listView.DeleteAllItems();
-		_variant_t url("about:blank");
 		HTREEITEM i = m_treeView.GetSelectedItem();
 		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
@@ -1287,15 +1296,32 @@ public:
 					}
 				}
 			}
+		}
+
+		ShowSummaryPage();
+		return 0;
+	}
+
+	void ShowSummaryPage()
+	{
+		_variant_t url("about:blank");
+		HTREEITEM i = m_treeView.GetSelectedItem();
+		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
+		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
+
+		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot || i == m_searchRoot)
+		{
+			CAtlString search;
+
+			if(i == m_searchRoot)
+				m_SrcBar.m_search.GetWindowText(search);
 
 			TCHAR tmpPath[MAX_PATH];
 			::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, tmpPath);
 			::PathAppend(tmpPath, "FeedIt");
 
 			if(::GetFileAttributes(tmpPath) == INVALID_FILE_ATTRIBUTES)
-			{
 				::CreateDirectory(tmpPath, NULL);
-			}
 
 			::PathAppend(tmpPath, "Temp.htm");
 			HANDLE hFile = ::CreateFile(tmpPath, FILE_ALL_ACCESS, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -1417,7 +1443,6 @@ public:
 
 		_variant_t v;
 		m_htmlCtrl->Navigate2(&url, &v, &v, &v, &v);
-		return 0;
 	}
 
 	bool CheckSearchResult(CAtlString& search, CAtlString& title, CAtlString& description)

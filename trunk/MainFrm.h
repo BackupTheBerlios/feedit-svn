@@ -65,10 +65,23 @@ public:
 
 		if(::GetFileAttributes(m_dbPath) == INVALID_FILE_ATTRIBUTES)
 		{
+			CreateDB(m_dbPath);
+		}
+		else
+		{
+            UpgradeDB(m_dbPath);			
+		}
+	}
+
+	bool CreateDB(TCHAR *dbPath)
+	{
+		bool result = true;
+		try
+		{		
 			ADOX::_CatalogPtr catalog;
 			catalog.CreateInstance(__uuidof(ADOX::Catalog));
 			ATLASSERT(catalog != NULL);
-			catalog->Create(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+m_dbPath);
+			catalog->Create(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+dbPath);
 			ADODB::_ConnectionPtr connection;
 			connection.CreateInstance(__uuidof(ADODB::Connection));
 			ATLASSERT(connection != NULL);
@@ -85,9 +98,82 @@ public:
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
-			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
+			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, ItemDeleted VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE INDEX NewsI1 ON News (FeedID)"), NULL, 0);
 		}
+		catch (...) 
+		{
+			DisplayError();		
+			result = false;
+		}
+
+		return result;
+	}
+
+	bool UpgradeDB(TCHAR *dbPath)
+	{
+		bool result = true;
+		//Upgrade the Old DB
+		ADODB::_ConnectionPtr connection;
+		connection.CreateInstance(__uuidof(ADODB::Connection));
+		ATLASSERT(connection != NULL);
+		connection->Open(_bstr_t("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=")+dbPath, _bstr_t(), _bstr_t(), 0);
+		bool isolddb = false;
+		try
+		{
+			//Check if it is an old table
+			connection->Execute(_bstr_t("Select count(ItemDeleted) from News "), NULL, 0);
+			isolddb = false;
+		}	
+		catch(_com_error &comErr)
+		{
+			isolddb = true;
+			DisplayCOMError(comErr);
+		}
+		catch (...) 
+		{
+			DisplayError();
+			isolddb = true;
+		}
+
+		//If Old Table then do an Upgrade
+		if (isolddb == true)
+		{	
+			try
+			{
+				//Upgrade the table if it is not a new one.
+				connection->Execute(_bstr_t("ALTER TABLE News ADD ItemDeleted VARCHAR(1) NOT NULL"), NULL, 0);
+				connection->Execute(_bstr_t("UPDATE News SET ItemDeleted = '0' where ItemDeleted is NULL"), NULL, 0);
+				isolddb = false;
+			}
+			catch(_com_error &comErr)
+			{
+				result=false;
+				DisplayCOMError(comErr);
+			}
+			catch (...) 
+			{	
+				DisplayError();
+				result=false;
+			}
+		}	
+		return result;
+	}
+	
+	void DisplayError(void)
+	{
+		ATLTRACE("Error\n");
+	}
+	void DisplayCOMError(_com_error &comErr)
+	{
+		_bstr_t bstrSource(comErr.Source());
+		_bstr_t bstrDescription(comErr.Description());
+
+		ATLTRACE("Error\n");
+		ATLTRACE("\tCode = %08lx\n", comErr.Error());
+		ATLTRACE("\tCode meaning = %s\n", comErr.ErrorMessage());
+		ATLTRACE("\tSource = %s\n", (LPCSTR) bstrSource);
+		ATLTRACE("\tDescription = %s\n", (LPCSTR) bstrDescription);
 	}
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg)
@@ -210,17 +296,17 @@ public:
 
 				if(feeddata != NULL)
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE News.ItemDeleted <> '1' AND FeedID=? ORDER BY Issued";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 				}
 				else if(folderdata != NULL)
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE News.ItemDeleted <> '1' AND Feeds.FolderID=? ORDER BY Issued";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
 				}
 				else
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID where News.ItemDeleted <> '1' ORDER BY Issued";
 				}
 
 				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
@@ -337,9 +423,17 @@ public:
 			UISetState(ID_FILE_DELETE, UPDUI_DISABLED);
 
 		if(feeddata != NULL)
+		{
 			UISetState(ID_VIEW_PROPERTIES, UPDUI_ENABLED);
+			UISetState(ID__FILE_RETRIVEDELETEDITEMS, UPDUI_ENABLED);
+			UISetState(ID__FILE_PURGEDELETEDITEMS, UPDUI_ENABLED);
+		}
 		else
+		{
 			UISetState(ID_VIEW_PROPERTIES, UPDUI_DISABLED);
+			UISetState(ID__FILE_RETRIVEDELETEDITEMS, UPDUI_DISABLED);
+			UISetState(ID__FILE_PURGEDELETEDITEMS, UPDUI_DISABLED);
+		}
 
 		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
 			UISetState(ID_ACTIONS_MARKALLREAD, UPDUI_ENABLED);
@@ -354,6 +448,7 @@ public:
 			UISetState(ID_ACTIONS_OPENINBROWSER, UPDUI_ENABLED);
 			UISetState(ID_ACTIONS_TOGGLEUNREAD, UPDUI_ENABLED);
 			UISetState(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_ENABLED);
+			UISetState(ID_ACTIONS_DELETEITEM, UPDUI_ENABLED);
 		}
 		else
 		{
@@ -361,6 +456,7 @@ public:
 			UISetState(ID_ACTIONS_OPENINBROWSER, UPDUI_DISABLED);
 			UISetState(ID_ACTIONS_TOGGLEUNREAD, UPDUI_DISABLED);
 			UISetState(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_DISABLED);
+			UISetState(ID_ACTIONS_DELETEITEM, UPDUI_DISABLED);
 		}
 
 		UIUpdateToolBar();
@@ -371,12 +467,15 @@ public:
 		UPDATE_ELEMENT(ID_VIEW_TOOLBAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_VIEW_STATUS_BAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID__FILE_RETRIVEDELETEDITEMS, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID__FILE_PURGEDELETEDITEMS, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_VIEW_PROPERTIES, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_SENDMAIL, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_OPENINBROWSER, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEUNREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_TOGGLEFLAGGED, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_MARKALLREAD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID_ACTIONS_DELETEITEM, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_BACK, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_FORWARD, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 	END_UPDATE_UI_MAP()
@@ -398,6 +497,8 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FEED, OnFileNewFeed)
 		COMMAND_ID_HANDLER(ID_FILE_NEW_FOLDER, OnFileNewFolder)
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
+		COMMAND_ID_HANDLER(ID__FILE_RETRIVEDELETEDITEMS, OnFileRetriveDeletedItems)
+		COMMAND_ID_HANDLER(ID__FILE_PURGEDELETEDITEMS, OnFilePurgeDeletedItems)
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT_OPML, OnFileExportOPML)
 		COMMAND_ID_HANDLER(ID_FILE_IMPORT_OPML, OnFileImportOPML)
 		COMMAND_ID_HANDLER(ID_VIEW_PROPERTIES, OnViewProperties)
@@ -407,6 +508,7 @@ public:
 		COMMAND_ID_HANDLER(ID_ACTIONS_OPENINBROWSER, OnActionsOpenInBrowser)
 		COMMAND_ID_HANDLER(ID_ACTIONS_TOGGLEUNREAD, OnActionsToggleUnread)
 		COMMAND_ID_HANDLER(ID_ACTIONS_TOGGLEFLAGGED, OnActionsToggleFlagged)
+		COMMAND_ID_HANDLER(ID_ACTIONS_DELETEITEM, OnActionsFeedDelete)
 		COMMAND_ID_HANDLER(ID_ACTIONS_MARKALLREAD, OnActionsMarkAllRead)
 		COMMAND_ID_HANDLER(ID_ACTIONS_UPDATEFEEDS, OnActionsUpdateFeeds)
 		COMMAND_ID_HANDLER(ID_ACTIONS_BACK, OnActionsBack)
@@ -506,15 +608,46 @@ public:
 							command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, recordset->Fields->GetItem("ID")->Value));
 							command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)age.Format("%Y/%m/%d %H:%M:%S")));
 							command->Execute(NULL, NULL, 0);
-						}
-
+						}						
+						
 						recordset->Fields->GetItem("LastError")->Value = (_bstr_t)fp.m_error;
 						recordset->Fields->GetItem("Link")->Value = (_bstr_t)fp.m_link;
 						recordset->Fields->GetItem("ImageLink")->Value = (_bstr_t)fp.m_image;
-						recordset->Fields->GetItem("Description")->Value = (_bstr_t)fp.m_description;
 						recordset->Fields->GetItem("LastUpdate")->Value = (_bstr_t)now.Format("%Y/%m/%d %H:%M:%S");
-						recordset->Update();
 
+						try
+						{						
+							//Some Feeds tend to send a description which is more than 255 characters.
+							//So Feedit is choking. Lets trim the Description before adding it to the db
+							CAtlString description = fp.m_description;
+							if (description.GetLength() > 254)
+							{
+								description.Delete(254,description.GetLength());
+							}							
+							recordset->Fields->GetItem("Description")->Value = (_bstr_t)description;
+						}
+						catch(_com_error &comErr)
+						{
+							DisplayCOMError(comErr);
+						}
+						catch (...) 
+						{							
+							DisplayError();
+						}
+
+						try
+						{
+							recordset->Update();
+						}
+						catch(_com_error &comErr)
+						{
+							DisplayCOMError(comErr);
+						}
+						catch (...) 
+						{
+							DisplayError();
+						}						
+						
 						m_statusBar.SetPaneText(ID_DEFAULT_PANE, "");
 					}
 				}
@@ -561,12 +694,120 @@ public:
 		return hNewItem;
 	}
 
-	void AddNewsToFeed(int feedid, const CFeedParser::FeedItem& item, const COleDateTime& age)
+	bool IsDigitsInt(CAtlString strvalue)
 	{
-		COleDateTime dt;
-		dt.SetStatus(COleDateTime::invalid);
-		CAtlString t1((const char*)item.m_date);
+		strvalue = strvalue.Trim();		
+		int yr = atoi(strvalue.GetString());
+		CAtlString formatstr;
+		CAtlString tmpstr;
+		
+		if (strvalue.GetLength() > 1 )
+		{
+			formatstr.Format("%%0%dd",strvalue.GetLength());
+		}
+		else
+		{
+			formatstr = "%d";
+		}
+		tmpstr.Format(formatstr,yr);
+		if (tmpstr == strvalue)
+			return true;
+		else
+			return false;
+	}
 
+	int MonthFromStr(CAtlString tok)
+	{
+		tok = tok.Trim();
+		tok=tok.MakeUpper();
+		int v = 0;
+		if(tok == "JAN")
+			v = 1;
+		else if(tok == "FEB")
+			v = 2;
+		else if(tok == "MAR")
+			v = 3;
+		else if(tok == "APR")
+			v = 4;
+		else if(tok == "MAY")
+			v = 5;
+		else if(tok == "JUN")
+			v = 6;
+		else if(tok == "JUL")
+			v = 7;
+		else if(tok == "AUG")
+			v = 8;
+		else if(tok == "SEP")
+			v = 9;
+		else if(tok == "OCT")
+			v = 10;
+		else if(tok == "NOV")
+			v = 11;
+		else if(tok == "DEC")
+			v = 12;
+
+		return v;
+	}
+
+	bool ParseFeedTime(CAtlString t1,COleDateTimeSpan &dts)
+	{
+		bool result = true;
+		int pos = 0;
+		CAtlString tok = t1.Tokenize(":", pos);
+		int dpos = 0;
+		int hr = 0 ,mi = 0 ,se = 0;
+		while(tok != "")
+		{
+			tok = tok.Trim();
+			switch(dpos) {
+				case 0: //Hours Part
+					if (IsDigitsInt(tok))
+					{
+						hr = atoi(tok.GetString());
+						result = result && true ;
+					}
+					else
+					{
+						hr=0;
+						result = false;
+					}
+					break;
+				case 1: //Minutes Part
+					if (IsDigitsInt(tok))
+					{
+						mi = atoi(tok.GetString());
+						result = result && true ;
+					}
+					else
+					{
+						mi=0;
+						result = false;
+					}
+					break;
+				case 2: //Seconds Part
+					if (IsDigitsInt(tok))
+					{
+						se = atoi(tok.GetString());
+						result = result && true ;
+					}
+					else
+					{
+						se=0;						
+						result = false ;
+					}
+					break;			
+			}
+			++dpos;
+			tok = t1.Tokenize(":", pos);
+		}
+		dts.SetDateTimeSpan(0,hr,mi,se);
+		return result;
+	}
+
+    bool ParseFeedDate(CAtlString t1,COleDateTime &dt)
+	{
+		bool result = false;
+		dt.SetStatus(COleDateTime::invalid);
 		if(t1.Mid(4, 1) == "-" && t1.Mid(7, 1) == "-")
 		{
 			dt.SetDateTime(atoi(t1.Mid(0, 4)), atoi(t1.Mid(5, 2)), atoi(t1.Mid(8, 2)), atoi(t1.Mid(11, 2)), atoi(t1.Mid(14, 2)), atoi(t1.Mid(17, 2)));
@@ -576,6 +817,7 @@ public:
 
 			if(t1.Mid(19, 1) == "-")
 				dt += COleDateTimeSpan(0, atoi(t1.Mid(20, 2)), atoi(t1.Mid(23, 2)), 0);
+			result = true;
 		}
 		else if(t1.Mid(3, 1) == "," && t1.Mid(4, 1) == " ")
 		{
@@ -590,30 +832,7 @@ public:
 
 				if(v == 0)
 				{
-					if(tok == "Jan")
-						v = 1;
-					else if(tok == "Feb")
-						v = 2;
-					else if(tok == "Mar")
-						v = 3;
-					else if(tok == "Apr")
-						v = 4;
-					else if(tok == "May")
-						v = 5;
-					else if(tok == "Jun")
-						v = 6;
-					else if(tok == "Jul")
-						v = 7;
-					else if(tok == "Aug")
-						v = 8;
-					else if(tok == "Sep")
-						v = 9;
-					else if(tok == "Oct")
-						v = 10;
-					else if(tok == "Nov")
-						v = 11;
-					else if(tok == "Dec")
-						v = 12;
+					v = MonthFromStr(tok);
 				}
 
 				if(v > 0 || (dpos >= 3 && v >= 0))
@@ -632,6 +851,59 @@ public:
 			{
 				dt += COleDateTimeSpan(0, atoi(tok.Mid(4)), 0, 0);
 			}
+			result = true;
+		}else  //20 Jul 05 10:10:53 GMT - used with JoelOnSoftware feeds
+		{
+			int pos = 0;
+			CAtlString tok = t1.Tokenize(" ", pos);
+			int dpos = 0;
+			int dy = 0,mo = 0,yr = 0;
+			COleDateTimeSpan dts;
+			while(tok != "")
+			{
+				tok = tok.Trim();
+				switch(dpos) {
+				case 0: //Day Part
+					if (IsDigitsInt(tok))
+						dy = atoi(tok.GetString());
+					else
+						dy=0;
+					break;
+				case 1: //Month Part
+					mo = MonthFromStr(tok);
+					break;
+				case 2: //Year Part
+					if (IsDigitsInt(tok))
+						yr = atoi(tok.GetString());
+					else
+						yr=0;
+					break;
+				case 3:					
+					ParseFeedTime(tok,dts);
+					break;
+				}
+				++dpos;
+				tok = t1.Tokenize(" ", pos);
+			}
+			
+			if ((dy != 0) && (mo!=0) && (yr !=0))
+			{				
+				dt.SetDateTime(yr,mo,dy,dts.GetHours(),dts.GetMinutes(),dts.GetSeconds());
+				result = true;
+			}
+		}	
+		//todo: Parse "Monday, August 01, 2005"
+
+		return result;
+	}
+
+	void AddNewsToFeed(int feedid, const CFeedParser::FeedItem& item, const COleDateTime& age)
+	{		
+		COleDateTime dt;		
+		CAtlString t1((const char*)item.m_date);
+		if (ParseFeedDate(t1,dt) == false)
+		{
+			dt.SetStatus(COleDateTime::invalid);
 		}
 
 		if(dt.GetStatus() == COleDateTime::invalid)
@@ -641,8 +913,67 @@ public:
 
 		if(dt > age)
 		{
-			try
+			int newsid = -1;
+			if (DoesNewsAlreadyExists(feedid , item.m_url, newsid) == true)
 			{
+				ADODB::_RecordsetPtr recordset;
+				recordset.CreateInstance(__uuidof(ADODB::Recordset));
+				ATLASSERT(recordset != NULL);
+				recordset->CursorLocation = ADODB::adUseServer;
+				CAtlString strsql;
+				strsql.Format("Select * from News WHERE ID = %d",newsid);
+				try
+				{
+					recordset->Open((_bstr_t)strsql, _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+					if (!recordset->EndOfFile)
+					{	
+						//Some Forum feeds get updated very often. we'll just update the 
+						//latest date to it alone.
+						//The Date Str from DB appends AM or PM, so I'm not able to test whether 
+						//the parsed date is equal to one in DB.
+
+						CAtlString dt1 = recordset->Fields->GetItem("Issued")->Value;
+						CAtlString dt2 = t2;
+					
+						COleDateTime dtDB;
+						dtDB.SetStatus(COleDateTime::invalid);
+						if (dtDB.ParseDateTime(dt1))
+							dt1 = dtDB.Format();
+						else
+							dt1 = "X";
+						
+						COleDateTime dtFD;
+						dtFD.SetStatus(COleDateTime::invalid);
+						if (dtFD.ParseDateTime(dt2))
+							dt2 = dtFD.Format();
+						else
+							dt2 = "Y";
+
+						if ( dt1.CompareNoCase(dt2) != 0 )
+						{
+							recordset->Fields->GetItem("Unread")->Value = _bstr_t("1"); //set the Issued Date
+							recordset->Fields->GetItem("Issued")->Value = (_bstr_t)t2; //set the Issued Date
+							try
+							{
+								recordset->Update();
+							}
+							catch (...) 
+							{
+								DisplayError();
+							}
+							
+						}
+					}
+				}
+				catch(...)
+				{
+					DisplayError();
+				}//todo
+				return;				
+			}
+
+			try
+			{	
 				ADODB::_RecordsetPtr recordset;
 				recordset.CreateInstance(__uuidof(ADODB::Recordset));
 				ATLASSERT(recordset != NULL);
@@ -656,13 +987,51 @@ public:
 				recordset->Fields->GetItem("Issued")->Value = _bstr_t(t2);
 				recordset->Fields->GetItem("Unread")->Value = _bstr_t("1");
 				recordset->Fields->GetItem("Flagged")->Value = _bstr_t("0");
+				recordset->Fields->GetItem("ItemDeleted")->Value = _bstr_t("0");
 				recordset->Update();
 				++m_newItems;
 			}
-			catch(...)
+			catch(_com_error &comErr)
 			{
+				DisplayCOMError(comErr);
+			}
+			catch (...) 
+			{	
+				DisplayError();
 			}
 		}
+	}
+
+	bool DoesNewsAlreadyExists(int feedid , CAtlString url , int &newsid)
+	{
+		bool result = false;
+		CAtlString strsql;
+		strsql.Format("Select ID from News where Feedid = %d and Url = '%s'",feedid,url);
+		ADODB::_RecordsetPtr recordset;
+		recordset.CreateInstance(__uuidof(ADODB::Recordset));
+		ATLASSERT(recordset != NULL);
+		recordset->CursorLocation = ADODB::adUseServer;
+		try
+		{
+			recordset->Open((_bstr_t)strsql, _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+		}
+		catch(...)
+		{
+			DisplayError();
+			return result;
+		}
+
+		if(!recordset->EndOfFile)
+		{
+			recordset->MoveFirst();
+			newsid = recordset->Fields->GetItem("ID")->Value;
+			result = true;
+		}
+		else
+		{
+			result = false;
+		}
+		return result;
 	}
 
 	void UpdateFeedProperties(FeedData* feeddata)
@@ -1251,17 +1620,17 @@ public:
 
 				if(feeddata != NULL)
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE News.ItemDeleted <> '1' AND FeedID=? ORDER BY Issued";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 				}
 				else if(folderdata != NULL)
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE  News.ItemDeleted <> '1' AND Feeds.FolderID=? ORDER BY Issued";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
 				}
 				else
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID  WHERE News.ItemDeleted <> '1' ORDER BY Issued";
 				}
 
 				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
@@ -1271,9 +1640,11 @@ public:
 					recordset->MoveFirst();
 
 					while(!recordset->EndOfFile)
-					{
-						if(i != m_searchRoot || CheckSearchResult(search, CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value), CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value)))
-						{
+					{	
+					   //We dont load the items that are deleted.
+						if ((i != m_searchRoot || CheckSearchResult(search, CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Title")->Value), CAtlString((char*)(_bstr_t)recordset->Fields->GetItem("News.Description")->Value))))
+						{	
+							
 							NewsData* newsdata = new NewsData();
 							newsdata->m_id = recordset->Fields->GetItem("News.ID")->Value;
 							newsdata->m_url = recordset->Fields->GetItem("News.URL")->Value;
@@ -1398,17 +1769,17 @@ public:
 
 				if(feeddata != NULL)
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE FeedID=? ORDER BY Issued DESC";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE News.ItemDeleted <> '1' AND FeedID=? ORDER BY Issued DESC";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
 				}
 				else if(folderdata != NULL)
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE Feeds.FolderID=? ORDER BY Issued DESC";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE News.ItemDeleted <> '1' AND Feeds.FolderID=? ORDER BY Issued DESC";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
 				}
 				else
 				{
-					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID ORDER BY Issued DESC";
+					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE  News.ItemDeleted <> '1' ORDER BY Issued DESC";
 				}
 
 				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
@@ -1670,8 +2041,9 @@ public:
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
-
-	int AddNewFeed(const char* url, const char* title)
+    
+    //Support for adding feeds directly to a folder and the ability to update the link when creating a new feed record
+	int AddNewFeed(const char* url, const char* title , int folderid = 0 ,const char *link = "")
 	{
 		int id = 0;
 
@@ -1683,9 +2055,10 @@ public:
 			recordset->CursorLocation = ADODB::adUseServer;
 			recordset->Open(_bstr_t("Feeds"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
 			recordset->AddNew();
-			recordset->Fields->GetItem("FolderID")->Value = 0;
+			recordset->Fields->GetItem("FolderID")->Value = folderid;
 			recordset->Fields->GetItem("Title")->Value = _bstr_t(title);
 			recordset->Fields->GetItem("URL")->Value = _bstr_t(url);
+			recordset->Fields->GetItem("Link")->Value = _bstr_t(link);
 			recordset->Fields->GetItem("LastUpdate")->Value = _bstr_t("2000/01/01 00:00:00");
 			recordset->Fields->GetItem("RefreshInterval")->Value = -1;
 			recordset->Fields->GetItem("MaxAge")->Value = -1;
@@ -1693,8 +2066,13 @@ public:
 			recordset->Update();
 			id = recordset->Fields->GetItem("ID")->Value;
 		}
-		catch(...)
+		catch(_com_error &comErr)
 		{
+			DisplayCOMError(comErr);
+		}
+		catch (...) 
+		{
+			DisplayError();
 		}
 
 		return id;
@@ -1711,7 +2089,22 @@ public:
 
 			if(fp.m_type != CFeedParser::FPFT_UNKNOWN)
 			{
-				int id = AddNewFeed(dlg.m_value, fp.m_title);
+			    //We'll add the Feed as a children of a Folder if a folder is selected when adding it. 
+				int folderid = 0;
+	
+				HTREEITEM i = m_treeView.GetSelectedItem();
+				FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
+
+				if(folderdata != NULL)
+				{
+					folderid = folderdata->m_id;
+				}
+				else
+				{
+					folderid = 0;
+				}
+
+				int id = AddNewFeed(dlg.m_value, fp.m_title,folderid);
 
 				if(id > 0)
 				{
@@ -1772,6 +2165,12 @@ public:
 
 	LRESULT OnFileDelete(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
+	   //Deleting a Feed is a big thing. Why not ask the user if he reall intend to delete it.
+	   //I for myself clicked the Delete button in the toolbar thinking that is going to delete the news Item rather than the Feed.
+		if (IDYES != AtlMessageBox(m_hWnd,"Do you want to delete the selected Folder/Feed ?" , "Confirm", MB_YESNO | MB_ICONQUESTION))
+		{
+			return 0;
+		}
 		HTREEITEM i = m_treeView.GetSelectedItem();
 
 		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
@@ -1811,6 +2210,61 @@ public:
 
 			delete (TreeData*)m_treeView.GetItemData(i);
 			m_treeView.DeleteItem(i);
+		}
+
+		return 0;
+	}
+	
+	//Lets give a chance to the users to change his mind :o)
+	LRESULT OnFileRetriveDeletedItems(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		if (IDYES != AtlMessageBox(m_hWnd,"Do you want to Retrieve all deleted Items from this Feed ?" , "Confirm", MB_YESNO | MB_ICONQUESTION))
+		{
+			return 0;
+		}
+		HTREEITEM i = m_treeView.GetSelectedItem();
+
+		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
+		{
+			if(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
+			{
+				ADODB::_CommandPtr command;
+				command.CreateInstance(__uuidof(ADODB::Command));
+				ATLASSERT(command != NULL);
+				command->ActiveConnection = m_connection;
+				command->CommandText = "UPDATE News SET ItemDeleted='0' WHERE ItemDeleted='1' AND FeedID=? ";
+				command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id));
+				command->Execute(NULL, NULL, 0);
+				RefreshList();
+			}
+		}
+
+		return 0;
+	}
+
+	//Let the users purge the news Items permanently :o)	
+	LRESULT OnFilePurgeDeletedItems(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		if (IDYES != AtlMessageBox(m_hWnd,"Do you want to purge the deleted Item of the selected Feed ?" , "Confirm", MB_YESNO | MB_ICONQUESTION))
+		{
+			return 0;
+		}
+		HTREEITEM i = m_treeView.GetSelectedItem();
+
+		if(i != NULL && i != m_feedsRoot && m_treeView.GetChildItem(i) == NULL)
+		{
+			if(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) != NULL)
+			{
+				{
+					ADODB::_CommandPtr command;
+					command.CreateInstance(__uuidof(ADODB::Command));
+					ATLASSERT(command != NULL);
+					command->ActiveConnection = m_connection;
+					command->CommandText = "DELETE FROM News WHERE ItemDeleted = '1' AND FeedID=?";
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id));
+					command->Execute(NULL, NULL, 0);
+				}
+			}
 		}
 
 		return 0;
@@ -1973,18 +2427,28 @@ public:
 				return 0;
 			}
 
-			MSXML2::IXMLDOMNodeListPtr nodes = xmldocument->selectNodes(_bstr_t("//outline[@type=\"rss\"]"));
+            //Some Reader like RSSBandit does not use Rss Type
+			MSXML2::IXMLDOMNodeListPtr nodes = xmldocument->selectNodes(_bstr_t("//outline"));			
 
 			if(nodes != NULL && nodes->length > 0)
 			{
 				MSXML2::IXMLDOMNodePtr node;
-
+				//We'll try to preserve the Folders and the Children Feed Positions.
+				MSXML2::IXMLDOMNodePtr parentnode;
+				HTREEITEM currentRoot = m_feedsRoot;
+				int folderid = 0;
 				while((node = nodes->nextNode()) != NULL)
 				{
 					MSXML2::IXMLDOMNodePtr urlnode = node->selectSingleNode(_bstr_t("@xmlUrl"));
 					MSXML2::IXMLDOMNodePtr titlenode = node->selectSingleNode(_bstr_t("@title"));
+					//FeedReader tends to output the Title as Text
+					MSXML2::IXMLDOMNodePtr textnode = node->selectSingleNode(_bstr_t("@text"));
+					MSXML2::IXMLDOMNodePtr linknode = node->selectSingleNode(_bstr_t("@htmlUrl"));
+					
+
 					CAtlString url;
 					CAtlString title;
+					CAtlString link;
 
 					if(urlnode != NULL)
 						url = (LPTSTR)urlnode->text;
@@ -1992,9 +2456,20 @@ public:
 					if(titlenode != NULL)
 						title = (LPTSTR)titlenode->text;
 
+					if(linknode != NULL)
+						link = (LPTSTR)linknode->text;
+
+					if( (textnode != NULL) && (title.GetLength() < 1))
+						title = (LPTSTR)textnode->text;
+					
 					if(url.GetLength() > 0 && title.GetLength() > 0)
 					{
-						int id = AddNewFeed(url, title);
+						if(parentnode != node->GetparentNode())			
+						{
+							currentRoot = m_feedsRoot;
+							folderid = 0;
+						}
+						int id = AddNewFeed(url, title,folderid,link);
 
 						if(id > 0)
 						{
@@ -2002,12 +2477,42 @@ public:
 							itemdata->m_id = id;
 							itemdata->m_title = title;
 							itemdata->m_unread = 0;
-							HTREEITEM item = m_treeView.InsertItem(title, m_feedsRoot, TVI_LAST);
+							itemdata->m_link = link;
+							HTREEITEM item = m_treeView.InsertItem(title, currentRoot, TVI_LAST);
 							m_treeView.SetItemImage(item, 0, 0);
 							m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
 							m_treeView.SortChildren(m_feedsRoot);
 							m_treeView.Expand(m_feedsRoot);
 						}
+					}else if (url.GetLength() == 0 && title.GetLength() > 0)
+					{    //We are adding the item without url as the folder
+						 parentnode = node;
+						 ADODB::_RecordsetPtr recordset;
+						 recordset.CreateInstance(__uuidof(ADODB::Recordset));
+						 ATLASSERT(recordset != NULL);
+						 recordset->CursorLocation = ADODB::adUseServer;
+						 recordset->Open(_bstr_t("Folders"), _variant_t(m_connection.GetInterfacePtr()), ADODB::adOpenStatic, ADODB::adLockOptimistic, 0);
+						 recordset->AddNew();
+						 recordset->Fields->GetItem("Name")->Value = (_bstr_t)title;
+						 try
+						 {
+							 recordset->Update();
+						 }
+						 catch (...) {
+							 //todo
+							 DisplayError();
+						 }
+						 
+						 FolderData* itemdata = new FolderData();
+						 itemdata->m_id = recordset->Fields->GetItem("ID")->Value;
+						 itemdata->m_name = title;
+						 HTREEITEM item = m_treeView.InsertItem(title, m_feedsRoot, TVI_LAST);
+						 m_treeView.SetItemImage(item, 1, 1);
+						 m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
+						 m_treeView.SortChildren(m_feedsRoot);
+						 m_treeView.Expand(m_feedsRoot);
+						 currentRoot = item;
+						 folderid = itemdata->m_id;
 					}
 				}
 
@@ -2226,6 +2731,41 @@ public:
 
 		return 0;
 	}
+	
+	LRESULT OnActionsFeedDelete(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		int idx = m_listView.GetSelectedIndex();
+		NewsData* newsdata = dynamic_cast<NewsData*>((ListData*)m_listView.GetItemData(idx));
+
+		if(newsdata != NULL)
+		{
+			ADODB::_CommandPtr command;
+			command.CreateInstance(__uuidof(ADODB::Command));
+			ATLASSERT(command != NULL);
+			command->ActiveConnection = m_connection;
+
+			command->CommandText = "UPDATE News SET ItemDeleted='1' WHERE ID=?";
+			
+			command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, newsdata->m_id));
+			command->Execute(NULL, NULL, 0);		
+			m_listView.DeleteItem(idx);
+			if (m_listView.GetItemCount() !=0)
+			{			
+				if (idx == m_listView.GetItemCount())
+				{
+					m_listView.SelectItem(idx -1);
+				}
+				else
+				{
+					m_listView.SelectItem(idx);
+				}
+			}
+			m_listView.Invalidate();
+		}
+
+		return 0;
+	}
+	
 
 	LRESULT OnActionsMarkAllRead(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
@@ -2363,13 +2903,14 @@ public:
 
 	HRESULT STDMETHODCALLTYPE ShowContextMenu(DWORD dwID, DWORD x, DWORD y, IUnknown *pcmdtReserved, IDispatch *pdispReserved, HRESULT *dwRetVal)
 	{
-		*dwRetVal = S_OK;
-		return S_OK;
+		//For Feature request : Showing IE's Menu on Right Click
+		return S_FALSE;
 	}
 
 	HRESULT STDMETHODCALLTYPE GetHostInfo(DWORD *pdwFlags, DWORD *pdwDoubleClick)
 	{
-		*pdwFlags = DOCHOSTUIFLAG_DIALOG | DOCHOSTUIFLAG_THEME | DOCHOSTUIFLAG_NO3DBORDER;
+		//For the new feature request to allow users to select text, I'm removing the style DOCHOSTUIFLAG_DIALOG
+		*pdwFlags = DOCHOSTUIFLAG_ACTIVATE_CLIENTHIT_ONLY | DOCHOSTUIFLAG_THEME | DOCHOSTUIFLAG_NO3DBORDER;
 		return S_OK;
 	}
 
@@ -2413,7 +2954,7 @@ public:
 		*dwRetVal = S_OK;
 
 		if(nMessage >= WM_KEYFIRST && nMessage <= WM_KEYLAST &&
-			(wParam == VK_TAB || wParam == VK_BACK || wParam == VK_RETURN || wParam == VK_UP || wParam == VK_DOWN || wParam == VK_LEFT || wParam == VK_RIGHT))
+			(wParam == VK_DELETE || wParam == VK_TAB || wParam == VK_BACK || wParam == VK_RETURN || wParam == VK_UP || wParam == VK_DOWN || wParam == VK_LEFT || wParam == VK_RIGHT))
 			*dwRetVal = S_FALSE;
 
 		return S_OK;

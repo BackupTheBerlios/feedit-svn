@@ -95,7 +95,7 @@ BEGIN
         MENUITEM "&New Feed...\tCtrl+N",        ID_FILE_NEW_FEED
         MENUITEM "New &Folder...\tCtrl+F",      ID_FILE_NEW_FOLDER
         MENUITEM SEPARATOR
-        MENUITEM "&Delete\tDel",                ID_FILE_DELETE
+        MENUITEM "&Delete Folder/Feed\tShift+Del", ID_FILE_DELETE
         MENUITEM SEPARATOR
         MENUITEM "&Export OPML file...",        32814
         MENUITEM "&Import OPML file...",        ID_FILE_IMPORT_OPML
@@ -108,6 +108,8 @@ BEGIN
         MENUITEM "&Open item in browser...\tCtrl+O", 32826
         MENUITEM "Toggle &unread",              32818
         MENUITEM "Toggle &flagged",             ID_ACTIONS_TOGGLEFLAGGED
+        MENUITEM SEPARATOR
+        MENUITEM "Delete News Item\t Del",      ID_ACTIONS_DELETEITEM
         MENUITEM SEPARATOR
         MENUITEM "Mark all &read\tCtrl+R",      ID_ACTIONS_MARKALLREAD
         MENUITEM "U&pdate all feeds",           ID_ACTIONS_UPDATEFEEDS
@@ -147,7 +149,10 @@ BEGIN
         MENUITEM "Mark all read\tCtrl+R",       ID_ACTIONS_MARKALLREAD
         MENUITEM "&Properties...\tCtrl+P",      ID_VIEW_PROPERTIES
         MENUITEM SEPARATOR
-        MENUITEM "&Delete\tDel",                ID_FILE_DELETE
+        MENUITEM "Retrieve Deleted Items",      ID__FILE_RETRIVEDELETEDITEMS
+        MENUITEM "Purge Deleted Items",         ID__FILE_PURGEDELETEDITEMS
+        MENUITEM SEPARATOR
+        MENUITEM "&Delete\tShift+Del",          ID_FILE_DELETE
     END
 END
 
@@ -155,6 +160,8 @@ IDR_LIST_POPUP MENU
 BEGIN
     POPUP ""
     BEGIN
+        MENUITEM "Delete News Item\tDel",       ID_ACTIONS_DELETEITEM
+        MENUITEM SEPARATOR
         MENUITEM "&Send item by email...\tCtrl+S", ID_ACTIONS_SENDMAIL
         MENUITEM "&Open item in browser...\tCtrl+O", 
                                                 ID_ACTIONS_OPENINBROWSER
@@ -305,14 +312,15 @@ END
 IDR_MAINFRAME ACCELERATORS 
 BEGIN
     "R",            ID_ACTIONS_MARKALLREAD, VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_ACTIONS_OPENINBROWSER, VIRTKEY, CONTROL, NOINVERT
     "S",            ID_ACTIONS_SENDMAIL,    VIRTKEY, CONTROL, NOINVERT
-    VK_DELETE,      ID_FILE_DELETE,         VIRTKEY, NOINVERT
+    VK_DELETE,      ID_ACTIONS_DELETEITEM,  VIRTKEY, NOINVERT
     "N",            ID_FILE_NEW_FEED,       VIRTKEY, CONTROL, NOINVERT
     "F",            ID_FILE_NEW_FOLDER,     VIRTKEY, CONTROL, NOINVERT
     VK_TAB,         ID_NEXT_PANE,           VIRTKEY, NOINVERT
     VK_TAB,         ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
     "P",            ID_VIEW_PROPERTIES,     VIRTKEY, CONTROL, NOINVERT
-    "O",            ID_ACTIONS_OPENINBROWSER, VIRTKEY, CONTROL, NOINVERT
+    VK_DELETE,      ID_FILE_DELETE,         VIRTKEY, SHIFT, NOINVERT
 END
 
 
@@ -479,6 +487,7 @@ BEGIN
     ID_ACTIONS_TOGGLEFLAGGED "Toggle flagged message status\nToggle flagged"
     ID_ACTIONS_TOGGLEUNREAD "Toggle unread message status\nToggle unread"
     ID_ACTIONS_OPENINBROWSER "Open item in browser\nOpen in browser"
+    ID_ACTIONS_DELETEITEM   "Delete Item\nDelete Selected Item"
 END
 
 #endif    // English (U.S.) resources

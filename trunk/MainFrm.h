@@ -1824,7 +1824,15 @@ public:
 				url = tmpPath;
 			}
 		}
-
+		//Stop the page load of the previous TreeItem or ListItem click
+		try
+		{
+			m_htmlCtrl->Stop();
+		}
+		catch (...) 
+		{
+			DisplayError();
+		}		
 		_variant_t v;
 		m_htmlCtrl->Navigate2(&url, &v, &v, &v, &v);
 	}
@@ -1975,7 +1983,15 @@ public:
 					url = tmpPath;
 				}
 			}
-
+			//Stop the page load of the previous TreeItem or ListItem click						
+			try
+			{
+				m_htmlCtrl->Stop();
+			}
+			catch (...) 
+			{
+				DisplayError();
+			}
 			_variant_t v;
 			m_htmlCtrl->Navigate2(&url, &v, &v, &v, &v);
 

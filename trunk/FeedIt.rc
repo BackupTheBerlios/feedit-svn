@@ -330,8 +330,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,3,1
- PRODUCTVERSION 1,0,3,1
+ FILEVERSION 1,0,3,2
+ PRODUCTVERSION 1,0,3,2
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -347,12 +347,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "FileDescription", "FeedIt Module"
-            VALUE "FileVersion", "1, 0, 3, 1"
+            VALUE "FileVersion", "1, 0, 3, 2"
             VALUE "InternalName", "FeedIt"
-            VALUE "LegalCopyright", "Copyright 2004"
+            VALUE "LegalCopyright", "Copyright 2004-2005"
             VALUE "OriginalFilename", "FeedIt.exe"
             VALUE "ProductName", "FeedIt Module"
-            VALUE "ProductVersion", "1, 0, 3, 1"
+            VALUE "ProductVersion", "1, 0, 3, 2"
         END
     END
     BLOCK "VarFileInfo"

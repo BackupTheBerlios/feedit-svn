@@ -96,10 +96,12 @@ public:
 			connection->Execute(_bstr_t("CREATE INDEX FeedsI1 ON Feeds (FolderID)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (0, 'FeedIt development blog', 'http://feedit.blogspot.com/atom.xml', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'Slashdot', 'http://slashdot.org/index.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
+			connection->Execute(_bstr_t("INSERT INTO Configuration (Name, CurrentValue) VALUES ('DefaultFeedSelection', 'http://slashdot.org/index.rss')"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'OSNews', 'http://www.osnews.com/files/recent.rdf', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("INSERT INTO Feeds (FolderID, Title, URL, LastUpdate, RefreshInterval, MaxAge, NavigateURL) VALUES (1, 'The Register', 'http://www.theregister.com/headlines.rss', '2000/01/01', -1, -1, 0)"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE TABLE News (ID AUTOINCREMENT UNIQUE NOT NULL, FeedID INTEGER NOT NULL, Title VARCHAR(255) NOT NULL, URL VARCHAR(255) NOT NULL, Issued DATETIME NOT NULL, Description MEMO, Unread VARCHAR(1) NOT NULL, Flagged VARCHAR(1) NOT NULL, ItemDeleted VARCHAR(1) NOT NULL, CONSTRAINT NewsC1 UNIQUE (FeedID, URL))"), NULL, 0);
 			connection->Execute(_bstr_t("CREATE INDEX NewsI1 ON News (FeedID)"), NULL, 0);
+						
 		}
 		catch (...) 
 		{
@@ -427,12 +429,14 @@ public:
 			UISetState(ID_VIEW_PROPERTIES, UPDUI_ENABLED);
 			UISetState(ID__FILE_RETRIVEDELETEDITEMS, UPDUI_ENABLED);
 			UISetState(ID__FILE_PURGEDELETEDITEMS, UPDUI_ENABLED);
+			UISetState(ID__FILE_DELETEALLNEWSITEM, UPDUI_ENABLED);			
 		}
 		else
 		{
 			UISetState(ID_VIEW_PROPERTIES, UPDUI_DISABLED);
 			UISetState(ID__FILE_RETRIVEDELETEDITEMS, UPDUI_DISABLED);
 			UISetState(ID__FILE_PURGEDELETEDITEMS, UPDUI_DISABLED);
+			UISetState(ID__FILE_DELETEALLNEWSITEM, UPDUI_DISABLED);
 		}
 
 		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot)
@@ -469,6 +473,7 @@ public:
 		UPDATE_ELEMENT(ID_FILE_DELETE, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID__FILE_RETRIVEDELETEDITEMS, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID__FILE_PURGEDELETEDITEMS, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
+		UPDATE_ELEMENT(ID__FILE_DELETEALLNEWSITEM, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)		
 		UPDATE_ELEMENT(ID_VIEW_PROPERTIES, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_SENDMAIL, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
 		UPDATE_ELEMENT(ID_ACTIONS_OPENINBROWSER, UPDUI_MENUPOPUP | UPDUI_TOOLBAR)
@@ -499,6 +504,7 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_DELETE, OnFileDelete)
 		COMMAND_ID_HANDLER(ID__FILE_RETRIVEDELETEDITEMS, OnFileRetriveDeletedItems)
 		COMMAND_ID_HANDLER(ID__FILE_PURGEDELETEDITEMS, OnFilePurgeDeletedItems)
+		COMMAND_ID_HANDLER(ID__FILE_DELETEALLNEWSITEM, OnFileDeleteAllNewsItems)		
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT_OPML, OnFileExportOPML)
 		COMMAND_ID_HANDLER(ID_FILE_IMPORT_OPML, OnFileImportOPML)
 		COMMAND_ID_HANDLER(ID_VIEW_PROPERTIES, OnViewProperties)
@@ -1049,12 +1055,13 @@ public:
 			recordset->MoveFirst();
 			feeddata->m_error = recordset->Fields->GetItem("LastError")->Value;
 			feeddata->m_link = recordset->Fields->GetItem("Link")->Value;
+			feeddata->m_rsslink = recordset->Fields->GetItem("URL")->Value;
 			feeddata->m_image = recordset->Fields->GetItem("ImageLink")->Value;
 			feeddata->m_description = recordset->Fields->GetItem("Description")->Value;
 		}
 	}
 
-	int GetConfiguration(const char* name, int def)
+	CAtlString GetConfiguration(const char* name, CAtlString def)
 	{
 		ADODB::_CommandPtr command;
 		command.CreateInstance(__uuidof(ADODB::Command));
@@ -1067,24 +1074,51 @@ public:
 		if(!recordset->EndOfFile)
 		{
 			recordset->MoveFirst();
-			return atoi((_bstr_t)recordset->Fields->GetItem("CurrentValue")->Value);
+			return CAtlString(recordset->Fields->GetItem("CurrentValue")->Value);
 		}
-
 		return def;
+	}
+
+	int GetConfiguration(const char* name, int def)
+	{
+		CAtlString tmp;
+		tmp.Format("%d",def);
+		return atoi(GetConfiguration(name,tmp));
+	}
+
+	void SetConfiguration(const char* name, CAtlString val)
+	{
+		CAtlString valstr;
+		valstr.Format("%s", val);
+
+		ADODB::_CommandPtr command;
+		command.CreateInstance(__uuidof(ADODB::Command));
+		ATLASSERT(command != NULL);
+		command->ActiveConnection = m_connection;		
+		command->CommandText = "SELECT * FROM Configuration WHERE Name=?";
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, name));
+		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+
+		ADODB::_CommandPtr updatecommand;
+		updatecommand.CreateInstance(__uuidof(ADODB::Command));
+		ATLASSERT(updatecommand != NULL);
+		updatecommand->ActiveConnection = m_connection;
+
+		if(recordset->EndOfFile)		
+			updatecommand->CommandText = "INSERT INTO Configuration (CurrentValue, Name) VALUES (?,?)";
+		else		
+			updatecommand->CommandText = "UPDATE Configuration SET CurrentValue=? WHERE Name=?";
+
+		updatecommand->GetParameters()->Append(updatecommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)valstr));
+		updatecommand->GetParameters()->Append(updatecommand->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, name));
+		updatecommand->Execute(NULL, NULL, 0);
 	}
 
 	void SetConfiguration(const char* name, int val)
 	{
-		ADODB::_CommandPtr command;
-		command.CreateInstance(__uuidof(ADODB::Command));
-		ATLASSERT(command != NULL);
-		command->ActiveConnection = m_connection;
-		command->CommandText = "UPDATE Configuration SET CurrentValue=? WHERE Name=?";
-		CAtlString valstr;
-		valstr.Format("%d", val);
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, (_bstr_t)valstr));
-		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adBSTR, ADODB::adParamInput, NULL, name));
-		command->Execute(NULL, NULL, 0);
+		CAtlString tmp;
+		tmp.Format("%d",val);
+		SetConfiguration(name,tmp);
 	}
 
 	int GetUnreadItemCount(int feedid)
@@ -1209,6 +1243,9 @@ public:
 		command->ActiveConnection = m_connection;
 		command->CommandText = "SELECT * FROM Folders";
 		ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
+		HTREEITEM firstFeedItem = NULL;
+		HTREEITEM previousSelectedFeedItem = NULL;
+		CAtlString strSelectedFeed = GetConfiguration("DefaultFeedSelection","");
 
 		if(!recordset->EndOfFile)
 		{
@@ -1220,6 +1257,9 @@ public:
 				folderitemdata->m_id = recordset->Fields->GetItem("ID")->Value;
 				folderitemdata->m_name = recordset->Fields->GetItem("Name")->Value;
 				HTREEITEM folderitem = m_treeView.InsertItem(folderitemdata->m_name, m_feedsRoot, TVI_LAST);
+				if ( (previousSelectedFeedItem == NULL) && (strSelectedFeed.CompareNoCase((bstr_t)recordset->Fields->GetItem("ID")->Value) ==0) )
+					previousSelectedFeedItem = folderitem;
+
 				m_treeView.SetItemImage(folderitem, 1, 1);
 				m_treeView.SetItemData(folderitem, (DWORD_PTR)folderitemdata);
 				ADODB::_CommandPtr subcommand;
@@ -1245,7 +1285,12 @@ public:
 						feeditemdata->m_description = subrecordset->Fields->GetItem("Description")->Value;
 						feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 						feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
+						feeditemdata->m_rsslink = subrecordset->Fields->GetItem("URL")->Value;
 						HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_title, folderitem, TVI_LAST);
+						if (firstFeedItem == NULL)
+							firstFeedItem = feeditem;
+						if ( (previousSelectedFeedItem == NULL) && (strSelectedFeed.CompareNoCase(feeditemdata->m_rsslink) == 0) )
+							previousSelectedFeedItem = feeditem;
 
 						if(feeditemdata->m_error.GetLength() == 0)
 							m_treeView.SetItemImage(feeditem, 0, 0);
@@ -1285,7 +1330,12 @@ public:
 				feeditemdata->m_description = subrecordset->Fields->GetItem("Description")->Value;
 				feeditemdata->m_unread = GetUnreadItemCount(feeditemdata->m_id);
 				feeditemdata->m_navigateURL = atoi(_bstr_t(subrecordset->Fields->GetItem("NavigateURL")->Value));
+				feeditemdata->m_rsslink = subrecordset->Fields->GetItem("URL")->Value;
 				HTREEITEM feeditem = m_treeView.InsertItem(feeditemdata->m_title, m_feedsRoot, TVI_LAST);
+				if (firstFeedItem == NULL)
+					firstFeedItem = feeditem;
+				if ( (previousSelectedFeedItem == NULL) && (strSelectedFeed.CompareNoCase(feeditemdata->m_rsslink) == 0) )
+					previousSelectedFeedItem = feeditem;
 
 				if(feeditemdata->m_error.GetLength() == 0)
 					m_treeView.SetItemImage(feeditem, 0, 0);
@@ -1338,7 +1388,17 @@ public:
 		m_updateThread.AddHandle(m_hTimer, this, NULL);
 		RestartTimer(0);
 
-		m_treeView.SelectItem(m_feedsRoot);
+		if (firstFeedItem != NULL)
+		{
+			if (previousSelectedFeedItem != NULL)
+				m_treeView.SelectItem(previousSelectedFeedItem);
+			else
+				m_treeView.SelectItem(firstFeedItem);
+		}
+		else
+			m_treeView.SelectItem(m_feedsRoot);
+		
+
 		return 0;
 	}
 
@@ -1604,6 +1664,7 @@ public:
 		HTREEITEM i = m_treeView.GetSelectedItem();
 		FeedData* feeddata = dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i));
 		FolderData* folderdata = dynamic_cast<FolderData*>((TreeData*)m_treeView.GetItemData(i));
+		CAtlString feedurl;
 
 		if(feeddata != NULL || folderdata != NULL || i == m_feedsRoot || i == m_searchRoot)
 		{
@@ -1622,15 +1683,18 @@ public:
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE News.ItemDeleted <> '1' AND FeedID=? ORDER BY Issued";
 					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, feeddata->m_id));
+					feedurl = feeddata->m_rsslink;
 				}
 				else if(folderdata != NULL)
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID WHERE  News.ItemDeleted <> '1' AND Feeds.FolderID=? ORDER BY Issued";
-					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));
+					command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, folderdata->m_id));					
+					feedurl.Format("%d",folderdata->m_id);
 				}
 				else
 				{
 					command->CommandText = "SELECT Feeds.*, News.* FROM Feeds INNER JOIN News ON Feeds.ID = News.FeedID  WHERE News.ItemDeleted <> '1' ORDER BY Issued";
+					feedurl = "";
 				}
 
 				ADODB::_RecordsetPtr recordset = command->Execute(NULL, NULL, 0);
@@ -1682,6 +1746,9 @@ public:
 			}
 		}
 
+
+
+		SetConfiguration("DefaultFeedSelection",feedurl);
 		ShowSummaryPage();
 		return 0;
 	}
@@ -2128,6 +2195,7 @@ public:
 					itemdata->m_id = id;
 					itemdata->m_title = fp.m_title;
 					itemdata->m_unread = 0;
+					itemdata->m_rsslink = dlg.m_value;
 					HTREEITEM item = m_treeView.InsertItem(fp.m_title, m_feedsRoot, TVI_LAST);
 					m_treeView.SetItemImage(item, 0, 0);
 					m_treeView.SetItemData(item, (DWORD_PTR)itemdata);
@@ -2256,6 +2324,29 @@ public:
 		}
 
 		return 0;
+	}
+
+	
+	LRESULT OnFileDeleteAllNewsItems(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		if (IDYES != AtlMessageBox(m_hWnd,"Do you want to delete all the news items of the selected Feed ?" , "Confirm", MB_YESNO | MB_ICONQUESTION))
+		{
+			return 0;
+		}
+		HTREEITEM i = m_treeView.GetSelectedItem();
+		if ( (i == NULL) ||(dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i)) == NULL) )
+			return 0;
+
+		ADODB::_CommandPtr command;
+		command.CreateInstance(__uuidof(ADODB::Command));
+		ATLASSERT(command != NULL);
+		command->ActiveConnection = m_connection;
+		
+		command->CommandText = "UPDATE News SET ItemDeleted = '1' ,  Unread='0' WHERE FeedID=?";
+		command->GetParameters()->Append(command->CreateParameter(_bstr_t(), ADODB::adInteger, ADODB::adParamInput, NULL, dynamic_cast<FeedData*>((TreeData*)m_treeView.GetItemData(i))->m_id));
+		command->Execute(NULL, NULL, 0);
+		RefreshList();
+		RefreshTree();
 	}
 
 	//Let the users purge the news Items permanently :o)	
@@ -2494,6 +2585,7 @@ public:
 							itemdata->m_title = title;
 							itemdata->m_unread = 0;
 							itemdata->m_link = link;
+							itemdata->m_rsslink = url;
 							HTREEITEM item = m_treeView.InsertItem(title, currentRoot, TVI_LAST);
 							m_treeView.SetItemImage(item, 0, 0);
 							m_treeView.SetItemData(item, (DWORD_PTR)itemdata);

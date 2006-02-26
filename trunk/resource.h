@@ -52,13 +52,14 @@
 #define ID_ACTIONS_DELETEITEM           32828
 #define ID__FILE_RETRIVEDELETEDITEMS    32832
 #define ID__FILE_PURGEDELETEDITEMS      32834
+#define ID__FILE_DELETEALLNEWSITEM      32836
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        212
-#define _APS_NEXT_COMMAND_VALUE         32835
+#define _APS_NEXT_COMMAND_VALUE         32837
 #define _APS_NEXT_CONTROL_VALUE         1019
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

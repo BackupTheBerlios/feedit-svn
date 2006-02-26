@@ -152,6 +152,9 @@ BEGIN
         MENUITEM "Retrieve Deleted Items",      ID__FILE_RETRIVEDELETEDITEMS
         MENUITEM "Purge Deleted Items",         ID__FILE_PURGEDELETEDITEMS
         MENUITEM SEPARATOR
+        MENUITEM "Delete All News Item",        ID__FILE_DELETEALLNEWSITEM
+        , INACTIVE
+        MENUITEM SEPARATOR
         MENUITEM "&Delete\tShift+Del",          ID_FILE_DELETE
     END
 END
@@ -185,17 +188,17 @@ IDR_MAINFRAME           ICON                    "res\\FeedIt.ico"
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 187, 102
+IDD_ABOUTBOX DIALOGEX 0, 0, 171, 97
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,130,81,50,14
-    CTEXT           "FeedIt %s",IDC_ABOUTTEXT,25,50,78,8
-    ICON            IDR_MAINFRAME,IDC_STATIC,55,26,20,20
-    GROUPBOX        "",IDC_STATIC,7,7,115,88
-    LTEXT           "(C) 2004 Sandro Tolaini",IDC_STATIC,26,66,75,8
-    LTEXT           "sandro@focuseek.com",IDC_STATIC,27,78,74,8,SS_NOTIFY
+    DEFPUSHBUTTON   "OK",IDOK,114,82,50,14
+    CTEXT           "FeedIt %s",IDC_ABOUTTEXT,43,42,78,8
+    ICON            IDR_MAINFRAME,IDC_STATIC,71,14,21,20
+    GROUPBOX        "",IDC_STATIC,7,7,156,73
+    LTEXT           "(C) 2004 Sandro Tolaini",IDC_STATIC,47,53,77,8
+    LTEXT           "(C) 2005- 2006 Guru Kathiresan",IDC_STATIC,33,65,100,8
 END
 
 IDD_STRING DIALOGEX 0, 0, 186, 67
@@ -262,9 +265,9 @@ BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 180
+        RIGHTMARGIN, 164
         TOPMARGIN, 7
-        BOTTOMMARGIN, 95
+        BOTTOMMARGIN, 90
     END
 
     IDD_STRING, DIALOG
@@ -330,8 +333,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,3,2
- PRODUCTVERSION 1,0,3,2
+ FILEVERSION 1,0,4,0
+ PRODUCTVERSION 1,0,4,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -347,12 +350,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "FileDescription", "FeedIt Module"
-            VALUE "FileVersion", "1, 0, 3, 2"
+            VALUE "FileVersion", "1, 0, 4, 0"
             VALUE "InternalName", "FeedIt"
-            VALUE "LegalCopyright", "Copyright 2004-2005"
+            VALUE "LegalCopyright", "Copyright 2004-2006"
             VALUE "OriginalFilename", "FeedIt.exe"
             VALUE "ProductName", "FeedIt Module"
-            VALUE "ProductVersion", "1, 0, 3, 2"
+            VALUE "ProductVersion", "1, 0, 4, 0"
         END
     END
     BLOCK "VarFileInfo"

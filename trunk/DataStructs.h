@@ -32,6 +32,7 @@ public:
 	CAtlString m_link;
 	CAtlString m_image;
 	CAtlString m_description;
+	CAtlString m_rsslink;
 	int m_unread;
 	int m_navigateURL;
 };

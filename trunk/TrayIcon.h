@@ -75,7 +75,7 @@ public:
 			return false;
 		m_nid.uFlags = NIF_INFO;
 		m_nid.dwInfoFlags = infoflags;
-		m_nid.uTimeout = 30;
+		m_nid.uTimeout = 10;
 		_tcsncpy(m_nid.szInfo, info, sizeof(m_nid.szInfo));
 		_tcsncpy(m_nid.szInfoTitle, infotitle, sizeof(m_nid.szInfoTitle));
 		return Shell_NotifyIcon(NIM_MODIFY, &m_nid) ? true : false;

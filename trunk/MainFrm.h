@@ -60,8 +60,11 @@ public:
 		{
 			::CreateDirectory(m_dbPath, NULL);
 		}
-
+#ifdef newTest
+		::PathAppend(m_dbPath, "FeedIt_debug.mdb");
+#else
 		::PathAppend(m_dbPath, "FeedIt.mdb");
+#endif		
 
 		if(::GetFileAttributes(m_dbPath) == INVALID_FILE_ATTRIBUTES)
 		{
@@ -2347,6 +2350,7 @@ public:
 		command->Execute(NULL, NULL, 0);
 		RefreshList();
 		RefreshTree();
+		return 0;
 	}
 
 	//Let the users purge the news Items permanently :o)	

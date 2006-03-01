@@ -47,7 +47,10 @@ public:
 			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("rss09:description"));
 
 			if(titlenode != NULL)
+			{
 				m_title = (LPTSTR)titlenode->text;
+				HTMLUnencode(m_title);
+			}
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
@@ -67,7 +70,10 @@ public:
 			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("rss10:description"));
 
 			if(titlenode != NULL)
+			{
 				m_title = (LPTSTR)titlenode->text;
+				HTMLUnencode(m_title);
+			}
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
@@ -87,7 +93,10 @@ public:
 			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("description"));
 
 			if(titlenode != NULL)
+			{
 				m_title = (LPTSTR)titlenode->text;
+				HTMLUnencode(m_title);
+			}
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
@@ -107,7 +116,10 @@ public:
 			MSXML2::IXMLDOMNodePtr descriptionnode = node->selectSingleNode(_bstr_t("atom:tagline"));
 
 			if(titlenode != NULL)
+			{
 				m_title = (LPTSTR)titlenode->text;
+				HTMLUnencode(m_title);
+			}
 
 			if(linknode != NULL)
 				m_link = (LPTSTR)linknode->text;
@@ -138,7 +150,10 @@ public:
 						FeedItem item;
 
 						if(titlenode != NULL)
+						{
 							item.m_title = (LPTSTR)titlenode->text;
+							HTMLUnencode(item.m_title);
+						}
 
 						if(urlnode != NULL)
 							item.m_url = (LPTSTR)urlnode->text;
@@ -172,7 +187,10 @@ public:
 						FeedItem item;
 
 						if(titlenode != NULL)
+						{
 							item.m_title = (LPTSTR)titlenode->text;
+							HTMLUnencode(item.m_title);
+						}
 
 						if(urlnode != NULL)
 							item.m_url = (LPTSTR)urlnode->text;
@@ -213,7 +231,10 @@ public:
 						FeedItem item;
 
 						if(titlenode != NULL)
+						{	
 							item.m_title = (LPTSTR)titlenode->text;
+							HTMLUnencode(item.m_title);
+						}
 
 						if(urlnode != NULL)
 							item.m_url = (LPTSTR)urlnode->text;
@@ -247,7 +268,10 @@ public:
 						FeedItem item;
 
 						if(titlenode != NULL)
+						{
 							item.m_title = (LPTSTR)titlenode->text;
+							HTMLUnencode(item.m_title);
+						}
 
 						if(urlnode != NULL)
 							item.m_url = (LPTSTR)urlnode->text;
@@ -266,6 +290,86 @@ public:
 			}
 		}
 	}
+	
+	void HTMLUnencode(CAtlString& s)
+	{
+		CAtlString sRet;
+
+		for(size_t i = 0; i < s.GetLength(); ++i)
+		{
+			if(s.GetString()[i] == '&')
+			{
+				if(s.GetLength() - i >= 6)
+				{
+					if(s.GetString()[i] == '&' &&
+						s.GetString()[i+1] == '#' &&
+						isdigit(s.GetString()[i+2]) &&
+						isdigit(s.GetString()[i+3]) &&
+						isdigit(s.GetString()[i+4]) &&
+						s.GetString()[i+5] == ';')
+					{
+						sRet += (char)( 
+							((s.GetString()[i+2] - '0') * 100) +
+						    ((s.GetString()[i+3] - '0') * 10) +
+						    ((s.GetString()[i+4] - '0') ));
+						i += 5;
+						continue;
+					}
+				}
+				if(s.GetLength() - i >= 6)
+				{
+					if(memcmp(&s.GetString()[i], "&apos;", 6) == 0)
+					{
+						sRet += '\'';
+						i += 5;
+						continue;
+					}
+					if(memcmp(&s.GetString()[i], "&nbsp;", 6) == 0)
+					{
+						sRet += ' ';
+						i += 5;
+						continue;
+					}
+					if(memcmp(&s.GetString()[i], "&quot;", 6) == 0)
+					{
+						sRet += '\"';
+						i += 5;
+						continue;
+					}
+				}
+				if(s.GetLength() - i >= 5 && memcmp(&s.GetString()[i], "&amp;", 5) == 0)
+				{
+					sRet += '&';
+					i += 4; //todo:  We should re-scan like this:
+					//                    wxTmemmove((wxChar*)&s.c_str()[i+1],
+					//                                (wxChar*)&s.c_str()[i+5],
+					//                                s.length() - (i+5) );
+					//                    s.c_str()[i+5]
+					//                    i -= 1;
+					continue;
+				}
+				if(s.GetLength() - i >= 4)
+				{
+					if(memcmp(&s.GetString()[i], "&lt;", 4) == 0)
+					{
+						sRet += '<';
+						i += 3;
+						continue;
+					}
+					if(memcmp(&s.GetString()[i], "&gt;", 4) == 0)
+					{
+						sRet += '>';
+						i += 3;
+						continue;
+					}
+				}
+			}
+
+			sRet += s.GetString()[i];
+		}
+
+		s = sRet;
+	} 
 
 	FeedType m_type;
 	CAtlString m_error;

@@ -22,6 +22,11 @@ public:
 
 	CFeedParser(const char* url) : m_type(FPFT_UNKNOWN)
 	{
+		ParseFeed(url);
+	}
+
+	FeedType ParseFeed(const char* url)
+	{
 		MSXML2::IXMLDOMDocument2Ptr xmldocument;
 		xmldocument.CreateInstance(_uuidof(MSXML2::DOMDocument));
 		ATLASSERT(xmldocument != NULL);
@@ -33,7 +38,7 @@ public:
 		if(xmldocument->parseError->errorCode != 0)
 		{
 			m_error = (char*)xmldocument->parseError->reason;
-			return;
+			return FPFT_UNKNOWN;
 		}
 
 		MSXML2::IXMLDOMNodePtr node;
@@ -289,8 +294,43 @@ public:
 				break;
 			}
 		}
+
+		return m_type;
 	}
 	
+	CAtlString AutoDiscoverFeed(const char* url)
+	{
+		CAtlString strURLBase = url;
+		if (strURLBase.GetLength() < 1)
+			return "";
+
+		if (strURLBase.GetAt(strURLBase.GetLength()-1) != '/')
+			strURLBase += "/";
+
+		CAtlArray<CAtlString> arry;
+		arry.Add(strURLBase+"atom.xml");
+		arry.Add(strURLBase+"wp-rss2.php");
+		arry.Add(strURLBase+"index.rss");
+		arry.Add(strURLBase+"index.rdf");
+		arry.Add(strURLBase+"rss.aspx");
+		arry.Add(strURLBase+"Rss.aspx");
+		arry.Add(strURLBase+"feed.rss");
+		arry.Add(strURLBase+"rss.php");
+		arry.Add(strURLBase+"feed.xml");
+		arry.Add(strURLBase+"feed/rss2/");
+		arry.Add(strURLBase+"rss2/");
+		arry.Add(strURLBase+"index.xml");
+		
+		for (int i = 0 ; i < arry.GetCount();++i)
+		{
+			if ( ParseFeed(arry.GetAt(i)) != FPFT_UNKNOWN)
+				return arry.GetAt(i);
+		}
+
+		return "";
+		
+	}
+
 	void HTMLUnencode(CAtlString& s)
 	{
 		CAtlString sRet;
